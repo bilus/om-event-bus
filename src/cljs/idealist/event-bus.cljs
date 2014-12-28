@@ -77,9 +77,9 @@
 ;; Public functions.
 
 (defn root>
-  "Uset this instead of om.core/root to add support for event bus functionality.
+  "Use this instead of om.core/root to add support for event bus functionality.
 
-  The arity 4 version lets you specify the channel if you also want to receive events from top-level code."
+  The arity 4 version lets you specify the channel if you also want to handle events outside of component hierarchy."
   ([f value options]
     (root> f value options (async/chan 1)))
   ([f value options event-bus]
