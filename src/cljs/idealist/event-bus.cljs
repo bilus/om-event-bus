@@ -1,8 +1,7 @@
 (ns idealist.event-bus
   (:require [om.core :as om :include-macros true]
-            [om.dom :as dom :include-macros true]
-            [cljs.core.async :as async :refer [<! >!]])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+            [cljs.core.async :as async])
+  (:require-macros [cljs.core.async.macros :as async]))
 
 ;; =============================================================================
 ;; Event handling protocol. Use it in your components if you're interested
@@ -14,6 +13,9 @@
 ;; TODO: xform
 ;; TODO: Terminate loop.
 ;;
+
+;; =============================================================================
+;; Helper functions.
 
 (defn- init-event-bus!
   "Adds support for triggering events and, if the component reified IGotEvent, support for handling events
@@ -35,26 +37,27 @@
         (async/tap fork branch)
         (async/tap fork downstream)
         (om/set-state! this ::event-bus upstream)
-        (go-loop []
-                 (let [e (<! branch)] ;; TODO: Termination.
+        (async/go-loop []
+                 (let [e (async/<! branch)]
                    (got-event c e))
                  (recur))))))
 
 (defn- before-will-mount!
-  "Overrides componentWillMount pure method to call the fn before its body."
-  [methods fn]
+  "Overrides componentWillMount pure method to call function f before its body."
+  [methods f]
   (let [prev-will-mount (:componentWillMount methods)]
     (-> methods
         (assoc :dly_prevWillMount prev-will-mount)
-        (assoc :componentWillMount fn))))
+        (assoc :componentWillMount #(this-as this
+                                             (do
+                                               (f this)
+                                               ((.-dly_prevWillMount this))))))))
 
 (defn- make-descriptor
   "Creates a custom descriptor with support for an event bus."
   []
-  (let [methods (before-will-mount! om/pure-methods (fn []
-                                                      (this-as this
-                                                               (init-event-bus! this)
-                                                               ((.-dly_prevWillMount this)))))
+  (let [methods (before-will-mount! om/pure-methods (fn [this]
+                                                      (init-event-bus! this)))
         descriptor (om/specify-state-methods! (clj->js methods))]
     descriptor))
 
@@ -69,6 +72,9 @@
                        (and om/*parent* (om/get-state om/*parent* ::event-bus))
                        event-bus)]
       (om/build* f x (update-in m [:init-state] merge {::event-bus parent-bus})))))
+
+;; =============================================================================
+;; Public functions.
 
 (defn root>
   "Uset this instead of om.core/root to add support for event bus functionality.
