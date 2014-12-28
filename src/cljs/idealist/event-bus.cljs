@@ -42,21 +42,35 @@
                    (got-event c e))
                  (recur))))))
 
+
+
+(defn- around-method!
+  "Overrides a pure method by wrapping it in f."
+  [method methods f]
+  (let [prev-method (method methods)]
+    (-> methods
+        (assoc method #(this-as this
+                                (do
+                                   (f this (fn []
+                                             (.call prev-method this)))))))))
+
+(defn- before-method!
+  "Overrides a pure method to call function f before its body."
+  [method methods f]
+  (around-method! method methods (fn [this super]
+                                   (f this)
+                                   (super))))
+
 (defn- before-will-mount!
   "Overrides componentWillMount pure method to call function f before its body."
   [methods f]
-  (let [prev-will-mount (:componentWillMount methods)]
-    (-> methods
-        (assoc :dly_prevWillMount prev-will-mount)
-        (assoc :componentWillMount #(this-as this
-                                             (do
-                                               (f this)
-                                               ((.-dly_prevWillMount this))))))))
+  (before-method! :componentWillMount methods f))
 
 (defn- make-descriptor
   "Creates a custom descriptor with support for an event bus."
   []
   (let [methods (before-will-mount! om/pure-methods (fn [this]
+                                                      (js/console.log "init-event-bus!")
                                                       (init-event-bus! this)))
         descriptor (om/specify-state-methods! (clj->js methods))]
     descriptor))
@@ -92,3 +106,4 @@
   [owner event]
   (let [event-send-fn (om/get-state owner ::trigger-fn)]
     (event-send-fn event)))
+
