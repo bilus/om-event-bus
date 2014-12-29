@@ -47,7 +47,7 @@
 
    Do not use the local state values directly; they are for internal use only."
   [this]
-  (trace "Setting event bus for" (om/id this))
+  (trace "Initializing event bus for" (om/id this))
   (let [downstream (om/get-state this ::event-bus)
         c (om/children this)
         {:keys [xform buf-or-n]} (merge default-config
