@@ -45,7 +45,7 @@
                                         (async/close! branch)))
         (async/go-loop []
                        (let [[event ch] (async/alts! [branch (async/timeout 5000)])]
-                         (println (om/id this) "got " event)
+                         #_(println (om/id this) "got " event)
                          (if event
                            (do
                              (got-event c event)
@@ -109,9 +109,15 @@
 (defn root>
   "Use this instead of om.core/root to add support for event bus functionality.
 
-  The arity 4 version lets you specify the channel if you also want to handle events outside of component hierarchy."
+  The arity 4 version lets you specify the channel if you also want to handle events outside of component hierarchy.
+  IMPORTANT: If you pass your own event bus channel, you **MUST** consume events."
   ([f value options]
-    (root> f value options (async/chan 1)))
+    (let [event-bus (async/chan 1)]
+      (root> f value options event-bus)
+      ;; Consume events to make sure async/mult delivers to all taps.
+      (async/go-loop []
+                     (let [x (<! event-bus)]
+                       (when x (recur))))))
   ([f value options event-bus]
     (om/root f value
              (merge options {:descriptor (make-descriptor {:componentWillMount
