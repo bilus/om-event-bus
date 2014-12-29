@@ -3,13 +3,13 @@
             [cljs.core.async :as async])
   (:require-macros [cljs.core.async.macros :as async]))
 
-;; =============================================================================
-
-(def ^:dynamic ^:private *parent*)
-
 (defn trace
   [& args]
   #_(apply println args))
+
+;; =============================================================================
+
+(def ^:dynamic ^:private *parent*)
 
 ;; =============================================================================
 ;;
