@@ -30,6 +30,8 @@
 ;; Event bus setup.
 
 (defn- maybe-apply-xform
+  "For an xform it returns the result of applying xform to event.
+  If xform is nil it returns unmodified event."
   [xform event]
   (if xform
     (first (reduce (xform conj) [] [event]))
@@ -75,6 +77,7 @@
                                (recur))))))))))
 
 (defn- shutdown-event-bus!
+  "Closes event bus channels for this component."
   [this]
   (om/set-state! this ::trigger-fn #(throw (js/Error. "Event bus has already been shut down.")))
   (let [c (om/children this)
