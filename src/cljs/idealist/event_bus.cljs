@@ -7,17 +7,41 @@
 
 (def ^:dynamic ^:private *parent*)
 
+(defn trace
+  [& args]
+  (apply println args))
+
 ;; =============================================================================
-;; Event handling protocol. Use it in your components if you're interested
-;; in handling events from children.
+;;
+;; Protocols.
 
 (defprotocol IGotEvent
-  (got-event [_ ev]))
+  "Event handling protocol. Use it in your components if you're interested in handling events from children."
+  (got-event [_ event]))
 
-;; TODO: xform
+(defprotocol IInitEventBus
+  "Use it in your component to override event bus options. Return an option hash to be merged into 'default-config'."
+  (init-event-bus [_]))
+
+(def default-config {:xform nil             ;; This optional xform will be applied to all events sent downstream.
+                     :buf-or-n 1})          ;; Buffer for internally created channels.
 
 ;; =============================================================================
 ;; Event bus setup.
+
+(defn- tap-with-optional-xform!
+  "Taps tap-ch into mult.
+
+  If 'xform' is not nil, it inserts an intermediary channel acting as xformer between mult and tap-ch and returns it.
+  Otherwise, returns nil."
+  [mult xform buf-or-n tap-ch]
+  (if (some? xform)
+    (let [xform-ch (async/chan buf-or-n xform)]
+      (async/tap mult xform-ch)
+      (async/pipe xform-ch tap-ch false)
+      xform-ch)
+    (async/tap mult tap-ch)
+    nil))
 
 (defn- init-event-bus!
   "Adds support for triggering events and, if the component reified IGotEvent, support for handling events
@@ -29,29 +53,35 @@
 
    Do not use the local state values directly; they are for internal use only."
   [this]
-  (println "Setting event bus for" (om/id this))
+  (trace "Setting event bus for" (om/id this))
   (let [downstream (om/get-state this ::event-bus)
-        c (om/children this)]
+        c (om/children this)
+        {:keys [xform buf-or-n]} (merge default-config
+                                        (when (satisfies? IInitEventBus c)
+                                          (or (init-event-bus c) {})))]
     (om/set-state! this ::trigger-fn #(async/put! downstream %))
     (when (satisfies? IGotEvent c)
-      (let [upstream (async/chan)
-            branch (async/chan)
-            fork (async/mult upstream)]
-        (async/tap fork branch)
-        (async/tap fork downstream)
-        (om/set-state! this ::event-bus upstream)
+      (let [upstream (async/chan buf-or-n)
+            branch (async/chan buf-or-n)
+            fork (async/mult upstream)
+            xform-ch (tap-with-optional-xform! fork xform buf-or-n downstream)]
+
         (om/set-state! this ::close-fn (fn []
-                                        (async/close! upstream)
-                                        (async/close! branch)))
+                                         (async/untap-all fork)
+                                         (async/close! upstream)
+                                         (async/close! branch)
+                                         (when xform-ch (async/close! xform-ch))))
+
+        (om/set-state! this ::event-bus upstream)
+        (async/tap fork branch)
         (async/go-loop []
                        (let [[event ch] (async/alts! [branch (async/timeout 5000)])]
-                         #_(println (om/id this) "got " event)
                          (if event
                            (do
                              (got-event c event)
                              (recur))
                            (when (not= ch branch)
-                             (println (om/id this) "is listening...")
+                             (trace (om/id this) "is listening...")
                              (recur)))))))))
 
 (defn- shutdown-event-bus!
@@ -60,7 +90,7 @@
   (let [c (om/children this)
         close-fn (om/get-state this ::close-fn)]
     (when (satisfies? IGotEvent c)
-      (println "Shutting down event bus for" (om/id this))
+      (trace "Shutting down event bus for" (om/id this))
       (close-fn))))
 
 ;; =============================================================================
