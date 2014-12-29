@@ -121,9 +121,8 @@
 (defn trigger
   "Sends an event from the component down through its parent components."
   [owner event]
-  (let [event-send-fn (om/get-state owner ::trigger-fn)]
-    (event-send-fn event))
+  (let [trigger-fn (om/get-state owner ::trigger-fn)]
+    (trigger-fn event))
   nil) ;; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
        ;; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
        ;; as appropriate."
-
