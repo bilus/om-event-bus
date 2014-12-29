@@ -73,7 +73,6 @@
   ([new-methods]
     (extend-pure-methods om/pure-methods new-methods))
   ([methods new-methods]
-    (println (seq new-methods))
     (loop [methods' methods [[new-method-name new-method-fn] & new-methods'] (seq new-methods)]
       (if new-method-name
         (recur (around-method new-method-name methods' new-method-fn) new-methods')
@@ -123,5 +122,8 @@
   "Sends an event from the component down through its parent components."
   [owner event]
   (let [event-send-fn (om/get-state owner ::trigger-fn)]
-    (event-send-fn event)))
+    (event-send-fn event))
+  nil) ;; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
+       ;; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
+       ;; as appropriate."
 
