@@ -48,7 +48,7 @@
 
 
 
-(defn- around-method!
+(defn- around-method
   "Overrides a pure method by wrapping it in f."
   [method methods f]
   (let [prev-method (method methods)]
@@ -76,7 +76,7 @@
     (println (seq new-methods))
     (loop [methods' methods [[new-method-name new-method-fn] & new-methods'] (seq new-methods)]
       (if new-method-name
-        (recur (around-method! new-method-name methods' new-method-fn) new-methods')
+        (recur (around-method new-method-name methods' new-method-fn) new-methods')
         methods'))))
 
 (defn- make-descriptor
@@ -111,7 +111,6 @@
     (om/root f value
              (merge options {:descriptor (make-descriptor {:componentWillMount
                                                            (fn [this super]
-                                                             (js/console.log "init-event-bus!")
                                                              (init-event-bus! this)
                                                              (super))
                                                            :render
@@ -121,7 +120,7 @@
                              :instrument (make-instrument-fn event-bus)}))))
 
 (defn trigger
-  "Sends an event from the component downwards to its parent components."
+  "Sends an event from the component down through its parent components."
   [owner event]
   (let [event-send-fn (om/get-state owner ::trigger-fn)]
     (event-send-fn event)))
