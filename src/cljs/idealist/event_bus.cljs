@@ -15,11 +15,9 @@
   (got-event [_ ev]))
 
 ;; TODO: xform
-;; TODO: Terminate loop.
-;;
 
 ;; =============================================================================
-;; Helper functions.
+;; Event bus setup.
 
 (defn- init-event-bus!
   "Adds support for triggering events and, if the component reified IGotEvent, support for handling events
@@ -31,6 +29,7 @@
 
    Do not use the local state values directly; they are for internal use only."
   [this]
+  (println "Setting event bus for" (om/id this))
   (let [downstream (om/get-state this ::event-bus)
         c (om/children this)]
     (om/set-state! this ::trigger-fn #(async/put! downstream %))
@@ -41,12 +40,31 @@
         (async/tap fork branch)
         (async/tap fork downstream)
         (om/set-state! this ::event-bus upstream)
+        (om/set-state! this ::close-fn (fn []
+                                        (async/close! upstream)
+                                        (async/close! branch)))
         (async/go-loop []
-                 (let [e (async/<! branch)]
-                   (got-event c e))
-                 (recur))))))
+                       (let [[event ch] (async/alts! [branch (async/timeout 5000)])]
+                         (println (om/id this) "got " event)
+                         (if event
+                           (do
+                             (got-event c event)
+                             (recur))
+                           (when (not= ch branch)
+                             (println (om/id this) "is listening...")
+                             (recur)))))))))
 
+(defn- shutdown-event-bus!
+  [this]
+  (om/set-state! this ::trigger-fn #(throw (js/Error. "Event bus has already been shut down.")))
+  (let [c (om/children this)
+        close-fn (om/get-state this ::close-fn)]
+    (when (satisfies? IGotEvent c)
+      (println "Shutting down event bus for" (om/id this))
+      (close-fn))))
 
+;; =============================================================================
+;; Custom om component descriptor.
 
 (defn- around-method
   "Overrides a pure method by wrapping it in f."
@@ -85,18 +103,6 @@
         descriptor (om/specify-state-methods! (clj->js methods))]
     descriptor))
 
-(defn- make-instrument-fn
-  "Creates the function called whenever a component calls build, build-all or build*.
-
-  What this function does is to pass on event bus core.async channel from parent to child. It uses the bus
-  in the parent's local state except for top-level components when it uses 'event-bus' passed as an argument."
-  [event-bus]
-  (fn [f x m]
-    (let [parent-bus (or
-                       (and *parent* (om/get-state *parent* ::event-bus))
-                       event-bus)]
-      (om/build* f x (update-in m [:init-state] merge {::event-bus parent-bus})))))
-
 ;; =============================================================================
 ;; Public functions.
 
@@ -112,11 +118,19 @@
                                                            (fn [this super]
                                                              (init-event-bus! this)
                                                              (super))
+                                                           :componentWillUnmount
+                                                           (fn [this super]
+                                                             (shutdown-event-bus! this)
+                                                             (super))
                                                            :render
                                                            (fn [this super]
                                                              (binding [*parent* this]
                                                                (super)))})
-                             :instrument (make-instrument-fn event-bus)}))))
+                             :instrument (fn [f x m]
+                                           (let [parent-bus (or
+                                                              (and *parent* (om/get-state *parent* ::event-bus))
+                                                              event-bus)]
+                                             (om/build* f x (update-in m [:init-state] merge {::event-bus parent-bus}))))}))))
 
 (defn trigger
   "Sends an event from the component down through its parent components."
