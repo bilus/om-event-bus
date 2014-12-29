@@ -4,6 +4,10 @@
   (:require-macros [cljs.core.async.macros :as async]))
 
 ;; =============================================================================
+
+(def ^:dynamic ^:private *parent*)
+
+;; =============================================================================
 ;; Event handling protocol. Use it in your components if you're interested
 ;; in handling events from children.
 
@@ -54,24 +58,31 @@
                                    (f this (fn []
                                              (.call prev-method this)))))))))
 
-(defn- before-method!
-  "Overrides a pure method to call function f before its body."
-  [method methods f]
-  (around-method! method methods (fn [this super]
-                                   (f this)
-                                   (super))))
+(defn- extend-pure-methods
+  "Given pure methods and a map of overrides, it extends pure methods with new lifecycle methods.
 
-(defn- before-will-mount!
-  "Overrides componentWillMount pure method to call function f before its body."
-  [methods f]
-  (before-method! :componentWillMount methods f))
+  Example:
+
+  (extend-pure-methods
+    {:render
+    (fn [this super]
+      ;; Do something.
+      (super))}) ;; Call the original method.
+
+  You can also specify a map of pure methods as the first argument."
+  ([new-methods]
+    (extend-pure-methods om/pure-methods new-methods))
+  ([methods new-methods]
+    (println (seq new-methods))
+    (loop [methods' methods [[new-method-name new-method-fn] & new-methods'] (seq new-methods)]
+      (if new-method-name
+        (recur (around-method! new-method-name methods' new-method-fn) new-methods')
+        methods'))))
 
 (defn- make-descriptor
   "Creates a custom descriptor with support for an event bus."
-  []
-  (let [methods (before-will-mount! om/pure-methods (fn [this]
-                                                      (js/console.log "init-event-bus!")
-                                                      (init-event-bus! this)))
+  [new-methods]
+  (let [methods (extend-pure-methods new-methods)
         descriptor (om/specify-state-methods! (clj->js methods))]
     descriptor))
 
@@ -83,7 +94,7 @@
   [event-bus]
   (fn [f x m]
     (let [parent-bus (or
-                       (and om/*parent* (om/get-state om/*parent* ::event-bus))
+                       (and *parent* (om/get-state *parent* ::event-bus))
                        event-bus)]
       (om/build* f x (update-in m [:init-state] merge {::event-bus parent-bus})))))
 
@@ -98,7 +109,15 @@
     (root> f value options (async/chan 1)))
   ([f value options event-bus]
     (om/root f value
-             (merge options {:descriptor (make-descriptor)
+             (merge options {:descriptor (make-descriptor {:componentWillMount
+                                                           (fn [this super]
+                                                             (js/console.log "init-event-bus!")
+                                                             (init-event-bus! this)
+                                                             (super))
+                                                           :render
+                                                           (fn [this super]
+                                                             (binding [*parent* this]
+                                                               (super)))})
                              :instrument (make-instrument-fn event-bus)}))))
 
 (defn trigger
