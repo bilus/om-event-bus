@@ -53,7 +53,8 @@
         {:keys [xform buf-or-n]} (merge default-config
                                         (when (satisfies? IInitEventBus c)
                                           (or (init-event-bus c) {})))]
-    (om/set-state! this ::trigger-fn #(async/put! downstream (maybe-apply-xform xform %)))
+    (om/set-state! this ::trigger-fn (fn [event]
+                                       (async/put! downstream (maybe-apply-xform xform event))))
     (when (or (satisfies? IGotEvent c) xform)
       (let [upstream (async/chan buf-or-n xform)
             branch (async/chan buf-or-n)
