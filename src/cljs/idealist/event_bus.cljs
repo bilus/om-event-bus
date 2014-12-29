@@ -9,7 +9,7 @@
 
 (defn trace
   [& args]
-  (apply println args))
+  #_(apply println args))
 
 ;; =============================================================================
 ;;
@@ -29,19 +29,11 @@
 ;; =============================================================================
 ;; Event bus setup.
 
-(defn- tap-with-optional-xform!
-  "Taps tap-ch into mult.
-
-  If 'xform' is not nil, it inserts an intermediary channel acting as xformer between mult and tap-ch and returns it.
-  Otherwise, returns nil."
-  [mult xform buf-or-n tap-ch]
-  (if (some? xform)
-    (let [xform-ch (async/chan buf-or-n xform)]
-      (async/tap mult xform-ch)
-      (async/pipe xform-ch tap-ch false)
-      xform-ch)
-    (async/tap mult tap-ch)
-    nil))
+(defn- maybe-apply-xform
+  [xform event]
+  (if xform
+    (first (reduce (xform conj) [] [event]))
+    event))
 
 (defn- init-event-bus!
   "Adds support for triggering events and, if the component reified IGotEvent, support for handling events
@@ -59,30 +51,28 @@
         {:keys [xform buf-or-n]} (merge default-config
                                         (when (satisfies? IInitEventBus c)
                                           (or (init-event-bus c) {})))]
-    (om/set-state! this ::trigger-fn #(async/put! downstream %))
-    (when (satisfies? IGotEvent c)
-      (let [upstream (async/chan buf-or-n)
+    (om/set-state! this ::trigger-fn #(async/put! downstream (maybe-apply-xform xform %)))
+    (when (or (satisfies? IGotEvent c) xform)
+      (let [upstream (async/chan buf-or-n xform)
             branch (async/chan buf-or-n)
-            fork (async/mult upstream)
-            xform-ch (tap-with-optional-xform! fork xform buf-or-n downstream)]
-
+            fork (async/mult upstream)]
         (om/set-state! this ::close-fn (fn []
                                          (async/untap-all fork)
                                          (async/close! upstream)
-                                         (async/close! branch)
-                                         (when xform-ch (async/close! xform-ch))))
-
+                                         (async/close! branch)))
         (om/set-state! this ::event-bus upstream)
-        (async/tap fork branch)
-        (async/go-loop []
-                       (let [[event ch] (async/alts! [branch (async/timeout 5000)])]
-                         (if event
-                           (do
-                             (got-event c event)
-                             (recur))
-                           (when (not= ch branch)
-                             (trace (om/id this) "is listening...")
-                             (recur)))))))))
+        (async/tap fork downstream)
+        (when (satisfies? IGotEvent c)
+          (async/tap fork branch)
+          (async/go-loop []
+                         (let [[event ch] (async/alts! [branch (async/timeout 5000)])]
+                           (if event
+                             (do
+                               (got-event c event)
+                               (recur))
+                             (when (not= ch branch)
+                               (trace (om/id this) "is listening...")
+                               (recur))))))))))
 
 (defn- shutdown-event-bus!
   [this]
