@@ -21,7 +21,7 @@ way. In addition, an event can be handled by any number of component wrapping th
 
 The library does its best to create minimal or no overhead for components that do not reify the `IGotEvent` interface.
 
-## Usage
+## Quick start
 
 Add `[om-event-bus "0.1.1-SNAPSHOT"]` as leiningen dependency.
 
@@ -75,7 +75,11 @@ To hook this up, use `event-bus/root>` instead of `om.core/root`:
 
 Note that `event-bus/root` uses :instrument and :descriptor. You need to be aware of that if your coded uses it as well.
 
-See [examples](https://github.com/bilus/om-event-bus/tree/master/examples) for example usage starting with [simple](https://github.com/bilus/om-event-bus/tree/master/examples/simple).
+## More information
+
+* [Reference and internals](http://bilus.github.io/om-event-bus/)
+* [Examples](https://github.com/bilus/om-event-bus/tree/master/examples)
+
 
 ## Advanced usage
 
