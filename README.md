@@ -1,6 +1,8 @@
 # om-event-bus
 
-Simple child->parent communication for Om components.
+**Work in progress. This is a pre-alpha release and the interface may change. Feedback and critique are most welcome at @martinbilski or gyamtso@gmail.com.**
+
+
 
 Use this library when you want child components to communicate with parent components. It's usually best to avoid
 coupling as much as possible but if you are writing complex UI components this may be unavoidable.
@@ -17,6 +19,8 @@ This idea is best expressed as an imaginary bus connecting components.
 One important feature is that events flow in only one direction, i.e. from children to their ancestors, never the other
 way. In addition, an event can be handled by any number of component wrapping the source component.
 
+The library does its best to create minimal or no overhead for components that do not reify the `IGotEvent` interface.
+
 ## Usage
 
 Add `[om-event-bus "0.1.1-SNAPSHOT"]` as leiningen dependency.
@@ -24,12 +28,76 @@ Add `[om-event-bus "0.1.1-SNAPSHOT"]` as leiningen dependency.
 In addition to [om](https://github.com/swannodette/om), the library also relies on
 [core.async](https://github.com/clojure/core.async) so make sure to include those as well.
 
-Let's say you have three levels of nested components (in this case simple buttons to illustrate
+Require namespace:
+
+```clojure
+(ns my.namespace
+ (:require [om-event-bus :as event-bus]
+           ... etc. ...))
+```
+
+Sending events:
+
+```clojure
+(defn child-view
+      [app owner]
+      (reify
+        om/IRender
+        (render [_]
+                (dom/button
+                  #js
+                  {:onClick #(event-bus/trigger owner "event from child")}
+                  "Click me!"))))
+```
+
+Receiving events:
+
+```clojure
+(defn parent-view
+      [app owner]
+      (reify
+        event-bus/IGotEvent
+        (got-event [_ ev]
+                   (js/console.log "parent received" (clj->js ev)))
+        om/IRender
+        (render [_]
+         (om/build child-view app))))
+```
+
+To hook this up, use `event-bus/root>` instead of `om.core/root`:
+
+```clojure
+(event-bus/root>
+  parent-view
+  app-state
+  {:target (. js/document (getElementById "app"))})
+```
+
+Note that `event-bus/root` uses :instrument and :descriptor. You need to be aware of that if your coded uses it as well.
+
+See [examples](https://github.com/bilus/om-event-bus/tree/master/examples) for example usage starting with [simple](https://github.com/bilus/om-event-bus/tree/master/examples/simple).
+
+## Advanced usage
+
+### Specifying options
+
+TBD
+
+### Event xforms
+
+TBD
+
+## Building examples
+
+```
+> lein cljsbuild once
+```
+
+Open the generated html files, e.g. `examples/simple/index.html`.
 
 
 ## License
 
-Copyright © 2014 FIXME
+Copyright © 2014 Marcin Bilski
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the Eclipse Public License (see the accompanying epl.html file).

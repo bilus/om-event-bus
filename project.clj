@@ -10,5 +10,10 @@
 
 
             :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]]
-            )
+            :cljsbuild {:builds [{:id           "simple"
+                                  :source-paths ["src" "examples/simple/src"]
+                                  :compiler     {:output-to     "examples/simple/main.js"
+                                                 :output-dir    "examples/simple/out"
+                                                 :source-map    true
+                                                 :optimizations :none}}]})
 
