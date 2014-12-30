@@ -1,4 +1,4 @@
-(ns idealist.event-bus
+(ns om-event-bus.core
   (:require [om.core :as om :include-macros true]
             [cljs.core.async :as async])
   (:require-macros [cljs.core.async.macros :as async]))
