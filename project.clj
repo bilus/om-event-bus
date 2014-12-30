@@ -9,7 +9,9 @@
                            [om "0.8.0-beta5" :scope "provided"]]
 
 
-            :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]]
+            :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
+                      [lein-marginalia "0.8.0"]]
+
             :cljsbuild {:builds [{:id           "simple"
                                   :source-paths ["src" "examples/simple/src"]
                                   :compiler     {:output-to     "examples/simple/main.js"
