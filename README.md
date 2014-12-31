@@ -14,14 +14,14 @@ In this approach components nested within each other can send custom events to t
 
 This idea is best expressed as an imaginary bus connecting components.
 
-![High-level overview](https://raw.githubusercontent.com/bilus/om-event-bus/master/docs/event-bus.png)
+[TODO: diagram]
 
 One important feature is that events flow in only one direction, i.e. from children to their ancestors, never the other
 way. In addition, an event can be handled by any number of component wrapping the source component.
 
 The library does its best to create minimal or no overhead for components that do not reify the `IGotEvent` interface.
 
-## Quick start
+## Usage
 
 Add `[om-event-bus "0.1.1-SNAPSHOT"]` as leiningen dependency.
 
@@ -39,7 +39,8 @@ Require namespace:
 Sending events:
 
 ```clojure
-(defn child-view [app owner]
+(defn child-view
+      [app owner]
       (reify
         om/IRender
         (render [_]
@@ -52,7 +53,8 @@ Sending events:
 Receiving events:
 
 ```clojure
-(defn parent-view [app owner]
+(defn parent-view
+      [app owner]
       (reify
         event-bus/IGotEvent
         (got-event [_ ev]
@@ -71,95 +73,23 @@ To hook this up, use `event-bus/root>` instead of `om.core/root`:
   {:target (. js/document (getElementById "app"))})
 ```
 
-Note that `event-bus/root` uses `:instrument` and `:descriptor` keys. You need to be aware of that if your coded uses either.
+Note that `event-bus/root` uses :instrument and :descriptor. You need to be aware of that if your coded uses it as well.
 
-## More information
-
-* [Reference](http://bilus.github.io/om-event-bus/) - in addition to getting started material and function reference,
-it lets you peek into the internals.
-* [Examples](https://github.com/bilus/om-event-bus/tree/master/examples) - running examples and watching JS console may
-be the fastest way to get the intuition of how events work in the practice (see "Building examples" below).
-
+See [examples](https://github.com/bilus/om-event-bus/tree/master/examples) for example usage starting with [simple](https://github.com/bilus/om-event-bus/tree/master/examples/simple).
 
 ## Advanced usage
 
 ### Specifying options
 
-To configure event processing for a component, reify `IInitEventBus` and return a hash with options to be merged into
-the default configuration.
-
-```clojure
-(defn my-view [app owner]
-    (reify
-        ;; Other interfaces.
-        event-bus/IInitEventBus
-        (init-event-bus [_)
-            {:buf-or-n 1024})))
-```
-
-For the list of available options see [the reference](http://bilus.github.io/om-event-bus/).
+TBD
 
 ### Event xforms
 
-Each component may define an xform to apply to events both:
-
- - passing through it on their way from source components down to parents, and:
- - triggered by the component itself.
-
-In the former case, it lets components add detailed information to passing events without actually handling them and
-transforming explicitly. The latter use helps you add default information to all events triggered by the component in
-one place. Defining an xform guarantees that all events are transformed consistently.
-
-You may find xforms particularly useful in cases where `om.core/path` breaks encapsulation is too limited or to pass
-local state to parent components.
-
-In this concocted and useless example, we print the full path an event took to arrive at `parent-view`:
-
-```clojure
-(defn child-view
-      [app owner]
-      (reify
-        event-bus/IInitEventBus
-        (init-event-bus [_]
-                        {:xform (add-om-id-xform owner)})
-        om/IRender
-        (render [_]
-                (apply dom/div nil [(dom/button
-                                      #js {:onClick #(event-bus/trigger owner {:from "child"})}
-                                      (str "Child " (om/id owner)))]))))
-
-(defn parent-view
-      [app owner]
-      (reify
-        event-bus/IInitEventBus
-        (init-event-bus [_]
-                        {:xform (add-om-id-xform owner)})
-        event-bus/IGotEvent
-        (got-event [_ ev]
-                   (println "parent received" ev))
-        om/IRender
-        (render [_]
-                (apply dom/div nil [(dom/span
-                                      nil
-                                      (str "Parent " (om/id owner)))
-                                    (om/build child-view app)
-                                    (om/build child-view app)]))))
-```
-
-Clicking a button prints output similar this to the console:
-
-```
-parent received {:from child, :path [:1 :0]}
-```
-
-See [this](https://github.com/bilus/om-event-bus/tree/master/examples/xform) for the complete version of this example.
-
+TBD
 
 ## Building examples
 
 ```
-> git clone https://github.com/bilus/om-event-bus.git
-> cd om-event-bus
 > lein cljsbuild once
 ```
 
