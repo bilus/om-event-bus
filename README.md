@@ -32,7 +32,7 @@ Require namespace:
 
 ```clojure
 (ns my.namespace
- (:require [om-event-bus :as event-bus]
+ (:require [om-event-bus.core :as event-bus]
            ... etc. ...))
 ```
 
