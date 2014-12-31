@@ -220,8 +220,11 @@
         descriptor (om/specify-state-methods! (clj->js methods))]
     descriptor))
 
-;; ### Fluff
+;; ### Debugging
 
 (defn trace
+  "Uncomment this to get status information printed to JS console.
+
+  Note: Uses println."
   [& args]
   #_(apply println args))
