@@ -161,7 +161,7 @@ Clicking a button prints output similar this to the console:
 parent received {:from child, :path [:1 :0]}
 ```
 
-See [this](https://github.com/bilus/om-event-bus/tree/master/examples/xform) for the complete version of this example.
+See [this](https://github.com/bilus/om-event-bus/tree/master/examples/xform) for a complete version of this example.
 
 
 ## Building examples
