@@ -75,10 +75,18 @@ Note that `event-bus/root` uses `:instrument` and `:descriptor` keys. You need t
 
 ## More information
 
-* [Reference](http://bilus.github.io/om-event-bus/) - in addition to getting started material and function reference,
+1. [Reference](http://bilus.github.io/om-event-bus/) - in addition to getting started material and function reference,
 it lets you peek into the internals.
-* [Examples](https://github.com/bilus/om-event-bus/tree/master/examples) - running examples and watching JS console may
+
+2. [Examples](https://github.com/bilus/om-event-bus/tree/master/examples) - running examples and watching JS console may
 be the fastest way to get the intuition of how events work in the practice (see "Building examples" below).
+
+The following examples are available:
+
+*  Simple example [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/simple/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/simple/index.html)]
+*  Nested components [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/nested/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/nested/index.html)]
+*  Using xforms [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/xform/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/xform/index.html)]
+*  Receiving all events using core.async [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/go_loop/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/go_loopop/index.html)]
 
 
 ## Advanced usage
