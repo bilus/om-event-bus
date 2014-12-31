@@ -8,7 +8,7 @@ Use this library when you want child components to communicate with parent compo
 coupling as much as possible but if you are writing complex UI components this may be unavoidable.
 
 There are two common ways to do this that I know of: passing callbacks and using core.async. This library attempts to
- offer a more structured and seamless approach without explicit message passing.
+ offer a more structured and seamless approach with less noise.
 
 In this approach components nested within each other can send custom events to their parents at any level.
 
