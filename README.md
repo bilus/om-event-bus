@@ -71,7 +71,7 @@ To hook this up, use `event-bus/root>` instead of `om.core/root`:
   {:target (. js/document (getElementById "app"))})
 ```
 
-Note that `event-bus/root` uses :instrument and :descriptor. You need to be aware of that if your coded uses it as well.
+Note that `event-bus/root` uses `:instrument` and `:descriptor` keys. You need to be aware of that if your coded uses either.
 
 ## More information
 
@@ -95,7 +95,7 @@ the default configuration.
             {:buf-or-n 1024})))
 ```
 
-For the list of available options see [reference](http://bilus.github.io/om-event-bus/).
+For the list of available options see [the reference](http://bilus.github.io/om-event-bus/).
 
 ### Event xforms
 
