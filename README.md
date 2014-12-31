@@ -71,7 +71,7 @@ To hook this up, use `event-bus/root>` instead of `om.core/root`:
   {:target (. js/document (getElementById "app"))})
 ```
 
-Note that `event-bus/root` uses `:instrument` and `:descriptor` keys. You need to be aware of that if your coded uses either.
+Note that `event-bus/root` uses `:instrument` and `:descriptor` keys. You need to be aware of that if your code uses either.
 
 ## More information
 
