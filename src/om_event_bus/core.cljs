@@ -11,7 +11,7 @@
             [cljs.core.async :as async])
   (:require-macros [cljs.core.async.macros :as async]))
 
-(declare make-descriptor init-event-bus! shutdown-event-bus!)
+(declare make-descriptor init-event-bus! shutdown-event-bus! trace)
 
 ; =============================================================================
 ;; ### Protocols
@@ -39,6 +39,8 @@
 
 ; =============================================================================
 ;; ### Replacement for om.core/root
+
+(def ^:dynamic ^:private *parent* nil)
 
 (defn root>
   "Use `root>` instead of om.core/root to add support for event bus functionality to all components.
@@ -218,4 +220,8 @@
         descriptor (om/specify-state-methods! (clj->js methods))]
     descriptor))
 
+;; ### Fluff
 
+(defn trace
+  [& args]
+  #_(apply println args))

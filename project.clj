@@ -17,5 +17,11 @@
                                   :compiler     {:output-to     "examples/simple/main.js"
                                                  :output-dir    "examples/simple/out"
                                                  :source-map    true
+                                                 :optimizations :none}}
+                                 {:id           "xform"
+                                  :source-paths ["src" "examples/xform/src"]
+                                  :compiler     {:output-to     "examples/xform/main.js"
+                                                 :output-dir    "examples/xform/out"
+                                                 :source-map    true
                                                  :optimizations :none}}]})
 
