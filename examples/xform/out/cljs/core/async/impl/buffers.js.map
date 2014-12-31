@@ -1,6 +1,6 @@
 {"version":3,
  "file":
- "/Users/martinb/dev/Logoot/om-event-bus/examples/simple/out/cljs/core/async/impl/buffers.js",
+ "/Users/martinb/dev/Logoot/om-event-bus/examples/xform/out/cljs/core/async/impl/buffers.js",
  "sources":["buffers.cljs"],
  "lineCount":323,
  "mappings":

@@ -1,6 +1,6 @@
 {"version":3,
  "file":
- "/Users/martinb/dev/Logoot/om-event-bus/examples/simple/out/cljs/core/async/impl/dispatch.js",
+ "/Users/martinb/dev/Logoot/om-event-bus/examples/go_loop/out/cljs/core/async/impl/dispatch.js",
  "sources":["dispatch.cljs"],
  "lineCount":64,
  "mappings":

@@ -1,6 +1,6 @@
 {"version":3,
  "file":
- "/Users/martinb/dev/Logoot/om-event-bus/examples/simple/out/om/dom.js",
+ "/Users/martinb/dev/Logoot/om-event-bus/examples/nested/out/om/dom.js",
  "sources":["dom.cljs"],
  "lineCount":2971,
  "mappings":

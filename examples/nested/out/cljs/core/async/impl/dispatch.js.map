@@ -1,6 +1,6 @@
 {"version":3,
  "file":
- "/Users/martinb/dev/Logoot/om-event-bus/examples/simple/out/cljs/core/async/impl/dispatch.js",
+ "/Users/martinb/dev/Logoot/om-event-bus/examples/nested/out/cljs/core/async/impl/dispatch.js",
  "sources":["dispatch.cljs"],
  "lineCount":64,
  "mappings":

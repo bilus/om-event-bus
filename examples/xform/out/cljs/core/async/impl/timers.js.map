@@ -1,6 +1,6 @@
 {"version":3,
  "file":
- "/Users/martinb/dev/Logoot/om-event-bus/examples/simple/out/cljs/core/async/impl/timers.js",
+ "/Users/martinb/dev/Logoot/om-event-bus/examples/xform/out/cljs/core/async/impl/timers.js",
  "sources":["timers.cljs"],
  "lineCount":445,
  "mappings":
