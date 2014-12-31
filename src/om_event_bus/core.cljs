@@ -1,6 +1,8 @@
 ;; # Introduction
 ;; Use this library whenever you need your Om components to communicate with their parent components.
 ;;
+;; ![High-level overview](event-bus.png)
+;;
 ;; There are three key things you need to learn about in order to start using this library in your Om project: protocols,
 ;; core.om/root replacement and the trigger function.
 ;;
