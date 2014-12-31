@@ -20,3 +20,7 @@ examples/simple/out/*
 examples/simple/main.js
 examples/xform/out/*
 examples/xform/main.js
+examples/go_loop/out/*
+examples/go_loop/main.js
+examples/nested/out/*
+examples/nested/main.js

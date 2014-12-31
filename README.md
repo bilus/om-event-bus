@@ -75,8 +75,10 @@ Note that `event-bus/root` uses `:instrument` and `:descriptor` keys. You need t
 
 ## More information
 
-* [Reference and internals](http://bilus.github.io/om-event-bus/)
-* [Examples](https://github.com/bilus/om-event-bus/tree/master/examples)
+* [Reference](http://bilus.github.io/om-event-bus/) - in addition to getting started material and function reference,
+it lets you peek into the internals.
+* [Examples](https://github.com/bilus/om-event-bus/tree/master/examples) - running examples and watching JS console may
+be the fastest way to get the intuition of how events work in the practice (see "Building examples" below).
 
 
 ## Advanced usage

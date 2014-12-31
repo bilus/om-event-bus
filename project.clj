@@ -23,5 +23,17 @@
                                   :compiler     {:output-to     "examples/xform/main.js"
                                                  :output-dir    "examples/xform/out"
                                                  :source-map    true
+                                                 :optimizations :none}}
+                                 {:id           "go_loop"
+                                  :source-paths ["src" "examples/go_loop/src"]
+                                  :compiler     {:output-to     "examples/go_loop/main.js"
+                                                 :output-dir    "examples/go_loop/out"
+                                                 :source-map    true
+                                                 :optimizations :none}}
+                                 {:id           "nested"
+                                  :source-paths ["src" "examples/nested/src"]
+                                  :compiler     {:output-to     "examples/nested/main.js"
+                                                 :output-dir    "examples/nested/out"
+                                                 :source-map    true
                                                  :optimizations :none}}]})
 
