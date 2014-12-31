@@ -86,7 +86,7 @@ The following examples are available:
 *  Simple example [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/simple/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/simple/index.html)]
 *  Nested components [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/nested/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/nested/index.html)]
 *  Using xforms [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/xform/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/xform/index.html)]
-*  Receiving all events using core.async [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/go_loop/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/go_loopop/index.html)]
+*  Receiving all events using core.async [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/go_loop/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/go_loop/index.html)]
 
 *When using the demos, open JS console to see the output. Please note that demos are in development version so they may take a while to load depending on your Internet connection.*
 
