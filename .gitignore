@@ -17,4 +17,3 @@ om_hello_world.iml
 src/.DS_Store
 src/cljx/.DS_Store
 resources/public/js/out.js.map
-examples/simple/out
