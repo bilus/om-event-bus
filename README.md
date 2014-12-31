@@ -119,8 +119,8 @@ In the former case, it lets components add detailed information to passing event
 transforming explicitly. The latter use helps you add default information to all events triggered by the component in
 one place. Defining an xform guarantees that all events are transformed consistently.
 
-You may find xforms particularly useful in cases where `om.core/path` breaks encapsulation is too limited or to pass
-local state to parent components.
+You may find xforms particularly useful in cases where `om.core/path` breaks encapsulation or is too limited. Another 
+example usage is passing local state (or its derivative) to parent components.
 
 In this concocted and useless example, we print the full path an event took to arrive at `parent-view`:
 
