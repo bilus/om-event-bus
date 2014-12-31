@@ -79,7 +79,7 @@ Note that `event-bus/root` uses `:instrument` and `:descriptor` keys. You need t
 it lets you peek into the internals.
 
 2. [Examples](https://github.com/bilus/om-event-bus/tree/master/examples) - running examples and watching JS console may
-be the fastest way to get the intuition of how events work in the practice (see "Building examples" below).
+be the fastest way to get the intuition of how events work in the practice.
 
 The following examples are available:
 
@@ -88,6 +88,7 @@ The following examples are available:
 *  Using xforms [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/xform/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/xform/index.html)]
 *  Receiving all events using core.async [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/go_loop/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/go_loopop/index.html)]
 
+*When using the demos, open JS console to see the output. Please note that demos are in development version so they may take a while to load depending on your Internet connection.*
 
 ## Advanced usage
 
