@@ -1,7 +1,8 @@
 (ns om-event-bus.impl-test
   (:require [om-event-bus.impl :refer :all]
             [clojure.test :refer :all]
-            [clojure.core.async :as async]))
+            [clojure.core.async :as async]
+            [clojure.tools.trace :as t]))
 
 (defn safe-take!
   [ch]
@@ -24,87 +25,70 @@
 
 (defn take-all!
   [ch]
-  (take-while some? (repeatedly #(safe-take! ch))))
+  (doall (take-while some? (repeatedly #(safe-take! ch)))))
 
 ;=======================================================================================================================
 
-(deftest single-segment
+(deftest single-leg
   (let [bus (event-bus)
         ch (async/chan 1024)]
     (tap bus ch)
     (testing "triggering"
       (route-event bus "event")
-      (is (= "event" (take! ch))))
+      (is (= ["event"] (take-all! ch))))
     (testing "shutdown"
       (shutdown bus)
       (route-event bus "event")
       (is (timeout? (take! ch))))))
 
-(deftest two-segments
-  (let [source (event-bus)
-        target (event-bus)
-        ch (async/chan 1024)]
-    (sink target source)
-    (tap target ch)
-    (testing "triggering at source"
-      (route-event source "event")
-      (is (= "event" (take! ch))))
-    (testing "triggering at target"
-      (route-event target "event")
-      (is (= "event" (take! ch))))
-    (testing "shutdown"
-      (shutdown source)
-      (route-event source "event")
-      (is (timeout? (take! ch))))))
 
 (deftest sending-downstream
-  (let [down (event-bus (downstream-router))
-        up (expand-up down)
-        down-out (async/chan 1024)
-        up-out (async/chan 1024)]
-    (tap down down-out)
-    (tap up up-out)
+  (let [os (async/chan 1024)
+        bus (event-bus (downstream-router))
+        parent (add-fork bus (fn [e] (async/put! os (str "[parent] " e))))
+        child (add-fork parent (fn [e] (async/put! os (str "[child] " e))))
+        grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))))]
     (testing "triggering"
-      (route-event up "event")
-      (is (= "event" (take! down-out)))
-      (is (timeout? (take! up-out))))
+      (route-event grandchild "event")
+      (is (= (sort ["[child] event" "[parent] event"])
+             (sort (take-all! os)))))
     (testing "shutdown"
-      (shutdown down)
-      (route-event up "event")
-      (is (timeout? (take! down-out))))))
+      (shutdown parent)
+      (route-event grandchild "event")
+      (is (= ["[child] event"] (take-all! os))))))
 
 (deftest sending-upstream
-  (let [down (event-bus (upstream-router))
-        up (expand-up down)
-        down-out (async/chan 1024)
-        up-out (async/chan 1024)]
-    (tap down down-out)
-    (tap up up-out)
+  (let [os (async/chan 1024)
+        bus (event-bus (upstream-router))
+        parent (add-fork bus (fn [e] (async/put! os (str "[parent] " e))))
+        child (add-fork parent (fn [e] (async/put! os (str "[child] " e))))
+        grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))))]
     (testing "triggering"
-      (route-event down "event")
-      (is (= "event" (take! down-out)))
-      (is (= "event" (take! up-out))))
+      (route-event bus "event")
+      (is (= (sort ["[grandchild] event" "[child] event" "[parent] event"])
+             (sort (take-all! os)))))
     (testing "shutdown"
-      (shutdown down)
-      (route-event down "event")
-      (is (timeout? (take! down-out)))
-      (is (timeout? (take! up-out))))))
+      (shutdown child)
+      (route-event bus "event")
+      (is (= (sort ["[parent] event"])
+             (sort (take-all! os)))))))
+
+
 
 (deftest event-handler
   (let [parent (event-bus (upstream-router))
         os (async/chan 1024)
-        child (expand-up parent (fn [ev]
-                                  (async/put! os (str "Received " ev))))]
+        child (add-fork parent (fn [ev]
+                                  (async/put! os (str "[child] " ev))))]
     (testing "triggering"
       (route-event parent "event")
-      (is (= "Received event" (take! os))))))
+      (is (= ["[child] event"] (take-all! os))))))
 
 (defn hub
   [os name event-bus-down event-bus-up]
-  (println name event-bus-down event-bus-up)
-  (let [event-bus-down' (expand-up event-bus-down #_(fn [event]
+  (let [event-bus-down' (add-fork event-bus-down (fn [event]
                                                     (async/put! os (str name " received '" event "' from a child"))))
-        event-bus-up' (expand-up event-bus-up #_(fn [event]
+        event-bus-up' (add-fork event-bus-up (fn [event]
                                                 (async/put! os (str name " received '" event "' from a parent"))))]
     [event-bus-down' event-bus-up']))
 
@@ -119,12 +103,11 @@
      :parent-up (second buses)
      :child-a-down (first (apply hub os "child A" buses))
      :child-b-down (first (apply hub os "child B" buses))}))
-
+;
 (deftest tree-structure
   (testing "broadcasting to all"
     (let [{:keys [os broadcast]} (set-up)]
       (route-event broadcast "event")
-
       (is (= (sort ["parent received 'event' from a parent"
                     "child A received 'event' from a parent"
                     "child B received 'event' from a parent"])
@@ -132,7 +115,6 @@
   (testing "sending down from child"
     (let [{:keys [os child-a-down]} (set-up)]
       (route-event child-a-down "event")
-
       (is (= (sort ["parent received 'event' from a child"])
              (sort (take-all! os))))))
 
@@ -143,4 +125,3 @@
       (is (= (sort ["child A received 'event' from a parent"
                     "child B received 'event' from a parent"])
              (sort (take-all! os)))))))
-
