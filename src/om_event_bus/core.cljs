@@ -51,39 +51,43 @@
 
   **IMPORTANT:** If you pass your own event bus channel, you **MUST** consume events.
 
-  What the `root>` function does is in the essence two things:
+  Here's what the `root>` function does:
 
-  1. It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
+  1. It intercepts calls to build (via `:instrument`) to pass on event bus channels from parent components to their
+  children (via local state).
+
+  2. It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
   and tear down the event bus for a component and to bind `*parent*` to be used in the `:instrument` function.
 
-  2. It intercepts calls to build (via `:instrument`) to pass on event bus channels from parent components to their
-  children (via local state)."
+  3. It passes the custom descriptor to `om.core/build*`."
   ([f value options]
     (let [event-bus (async/chan 1)]
       (root> f value options event-bus)
       ;; Consume events to make sure async/mult delivers to all taps.
       (async/go-loop []
-                     (let [x (<! event-bus)]
+                     (let [x (async/<! event-bus)]
                        (when x (recur))))))
   ([f value options event-bus]
-    (om/root f value
-             (merge options {:descriptor (make-descriptor {:componentWillMount
-                                                           (fn [this super]
-                                                             (init-event-bus! this)
-                                                             (super))
-                                                           :componentWillUnmount
-                                                           (fn [this super]
-                                                             (shutdown-event-bus! this)
-                                                             (super))
-                                                           :render
-                                                           (fn [this super]
-                                                             (binding [*parent* this]
-                                                               (super)))})
-                             :instrument (fn [f x m]
-                                           (let [parent-bus (or
-                                                              (and *parent* (om/get-state *parent* ::event-bus))
-                                                              event-bus)]
-                                             (om/build* f x (update-in m [:init-state] merge {::event-bus parent-bus}))))}))))
+    (let [descriptor (make-descriptor {:componentWillMount
+                                       (fn [this super]
+                                         (init-event-bus! this)
+                                         (super))
+                                       :componentWillUnmount
+                                       (fn [this super]
+                                         (shutdown-event-bus! this)
+                                         (super))
+                                       :render
+                                       (fn [this super]
+                                         (binding [*parent* this]
+                                           (super)))})]
+      (om/root f value
+              (merge options {:instrument (fn [f x m]
+                                            (let [parent-bus (or
+                                                               (and *parent* (om/get-state *parent* ::event-bus))
+                                                               event-bus)]
+                                              (om/build* f x (-> m
+                                                                 (update-in [:init-state] merge {::event-bus parent-bus})
+                                                                 (merge {:descriptor descriptor})))))})))))
 
 ; =============================================================================
 ;; ### Triggering events.
