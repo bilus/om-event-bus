@@ -14,6 +14,15 @@
                       [quickie "0.3.6"]
                       [com.cemerick/clojurescript.test "0.3.3"]]
 
+            :clean-targets ["examples/simple/main.js"
+                            "examples/simple/out"
+                            "examples/xform/main.js"
+                            "examples/xform/out"
+                            "examples/go_loop/main.js"
+                            "examples/go_loop/out"
+                            "examples/nested/main.js"
+                            "examples/nested/out"]
+
             :cljsbuild {:builds {:simple
                                  {:source-paths ["src" "examples/simple/src"]
                                   :compiler     {:output-to     "examples/simple/main.js"
