@@ -1,5 +1,5 @@
-(defproject om-event-bus "0.1.1-SNAPSHOT"
-            :description "Simple parent->child custom events for Om."
+(defproject om-event-bus "0.1.2-SNAPSHOT"
+            :description "Simple custom events for Om."
             :url "http://github.com/bilus/om-event-bus"
             :license {:name "Eclipse Public License"
                       :url  "http://www.eclipse.org/legal/epl-v10.html"}
