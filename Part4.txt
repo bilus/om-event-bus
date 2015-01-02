@@ -1,0 +1,798 @@
+(ns om-event-bus.core-test
+  (:require [clojure.test :refer :all]
+            #_[om-event-bus.core :refer :all]
+            [clojure.core.async :as async]))
+
+#_(deftest a-test
+  (testing "FIXME, I fail."
+    (is (= 0 1))))
+
+(def os (async/chan 1024))
+
+(async/go-loop []
+  (when-let [s (async/<! os)]
+    (println s)
+    (recur)))
+
+
+; This is how one-way event bus works.
+;
+;(def event-bus (chan))
+;
+;(defn hub [name downstream]
+;  (let [upstream (chan)
+;        branch (chan)
+;        fork (mult upstream)]
+;    (async/tap fork downstream)
+;    (async/tap fork branch)
+;    (async/go-loop []
+;      (let [event (<! branch)]
+;        (if event
+;          (do (>! os (str name " received " event))
+;            (recur))
+;          (println "Exiting!"))))
+;    upstream))
+;
+;
+;(def down-ch (hub "child"
+;                (hub "parent" event-bus)))
+;
+;(put! down-ch "msg")
+;(put! down-ch "msg")
+;
+;
+;(go-loop []
+;  (when (<! event-bus)
+;    (recur)))
+
+; Let's send it up from parent to children.
+;
+
+;(def event-bus (chan))
+;
+;(defn hub [name downstream-fork]
+;  (let [upstream (chan)
+;        branch (chan)]
+;    (async/tap downstream-fork upstream)
+;    (async/tap downstream-fork branch)
+;    (async/go-loop []
+;      (let [event (<! branch)]
+;        (when event
+;          (>! os (str name " received " event))
+;          (recur))))
+;    (mult upstream)))
+;
+;
+;(def down-ch (let [downstream (hub "parent" (mult event-bus))]
+;               (hub "child A" downstream)
+;               (hub "child B" downstream)))
+;
+;(put! event-bus "msg")
+
+
+;; Bi-directional bus.
+;
+;(def event-bus-down (chan))
+;(def event-bus-up (chan))
+;
+;(defn handle-events!
+;  [ch f]
+;  (async/go-loop []
+;    (let [event (<! ch)]
+;      (when event
+;        (f event)
+;        (recur)))))
+;
+;(defn init-parent->child-bus!
+;  [downstream-mult f]
+;  (let [upstream (chan)
+;        incoming-from-parents (chan)]
+;    (async/tap downstream-mult upstream)
+;    (async/tap downstream-mult incoming-from-parents)
+;    (handle-events! incoming-from-parents f)
+;    (mult upstream)))
+;
+;(defn init-child->parent-bus! [downstream f]
+;  (let [upstream (chan)
+;        incoming-from-children (chan)
+;        fork (mult upstream)]
+;    (async/tap fork downstream)
+;    (async/tap fork incoming-from-children)
+;    (handle-events! incoming-from-children f)
+;    upstream))
+;
+;(defn hub
+;  [name downstream downstream-mult]
+;  (let [x (init-child->parent-bus! downstream (fn [event]
+;                                                (put! os (str name " received from a child " event))))
+;        y (init-parent->child-bus! downstream-mult (fn [event]
+;                                                   (put! os (str name " received from a parent " event))))]
+;    [x y]))
+;
+;(defn set-up
+;  [event-bus-down event-bus-up]
+;  (let [buses (hub "parent" event-bus-down (mult event-bus-up))]
+;    (apply hub "child A" buses)
+;    (apply hub "child B" buses)))
+;
+;(def down-ch (first (set-up event-bus-down event-bus-up)))
+;
+;(put! event-bus-up "up")
+;(put! event-bus-up "up")
+;(put! event-bus-up "up")
+;
+;(put! down-ch "down")
+;(put! down-ch "down")
+;(put! down-ch "down")
+;
+;(go-loop []
+;  (when (<! event-bus-down)
+;    (recur)))
+
+
+
+;; Bi-directional bus. Version 2. No loop to 'eat' events is required.
+;
+;(def event-bus-down (mult (chan)))
+;(def event-bus-up (mult (chan)))
+;
+;(defn handle-events!
+;  [ch f]
+;  (async/go-loop []
+;    (let [event (<! ch)]
+;      (when event
+;        (f event)
+;        (recur)))))
+;
+;;(defprotocol IEventBus
+;;  (shut-down [])
+;;  (trigger [event]))
+;
+;(defn init-parent->child-bus!
+;  [downstream-mult f]
+;  (let [upstream (chan)
+;        incoming-from-parents (chan)]
+;    (async/tap downstream-mult upstream)
+;    (async/tap downstream-mult incoming-from-parents)
+;    (handle-events! incoming-from-parents f)
+;    (mult upstream)))
+;
+;(defn init-child->parent-bus! [downstream-mult f]
+;  (let [upstream (chan)
+;        incoming-from-children (chan)
+;        fork (mult upstream)]
+;    (async/tap fork (muxch* downstream-mult))
+;    (async/tap fork incoming-from-children)
+;    (handle-events! incoming-from-children f)
+;    fork))
+;
+;(defn hub
+;  [name downstream downstream-mult]
+;  (let [x (init-child->parent-bus! downstream (fn [event]
+;                                                (put! os (str name " received from a child " event))))
+;        y (init-parent->child-bus! downstream-mult (fn [event]
+;                                                     (put! os (str name " received from a parent " event))))]
+;    [x y]))
+;
+;(defn set-up
+;  [event-bus-down event-bus-up]
+;  (let [buses (hub "parent" event-bus-down event-bus-up)]
+;    (apply hub "child A" buses)
+;    (apply hub "child B" buses)))
+;
+;(def down-ch (first (set-up event-bus-down event-bus-up)))
+;
+;(put! (muxch* event-bus-up) "up")
+;(put! (muxch* event-bus-up) "up")
+;(put! (muxch* event-bus-up) "up")
+;
+;(put! (muxch* down-ch) "down")
+
+
+; Bi-directional bus. Version 3.
+;
+;(defn handle-events!
+;  [ch f]
+;  (async/go-loop []
+;    (let [event (async/<! ch)]
+;      (when event
+;        (f event)
+;        (recur)))))
+;
+;(defprotocol IEventBus
+;  (get-mult [_])
+;  (trigger [_ event]))
+;
+;(defn root-event-bus
+;  ([]
+;    (root-event-bus (async/mult (async/chan))))
+;  ([mult]
+;    (reify
+;      IEventBus
+;      (get-mult [_]
+;        mult)
+;      (trigger [_ event]
+;        (async/put! (async/muxch* mult) event)))))
+;
+;(defn make-event-bus
+;  [in out]
+;  (reify
+;    IEventBus
+;    (get-mult [_]
+;      out)
+;    (trigger [_ event]
+;      (async/put! (async/muxch* out) event))))
+;
+;(defn init-parent->child-bus!
+;  [down-bus f]
+;  (let [feed (async/chan)
+;        up (async/mult (async/chan))
+;        down (get-mult down-bus)
+;        up-bus (make-event-bus up down)]
+;    (async/tap down (async/muxch* up))
+;    (async/tap down feed)
+;    (handle-events! feed f)
+;    up-bus))
+;
+;(defn init-child->parent-bus! [down-bus f]
+;  (let [feed (async/chan)
+;        up (async/mult (async/chan))
+;        down (get-mult down-bus)
+;        up-bus (make-event-bus down up)]
+;    (async/tap up (async/muxch* down))
+;    (async/tap up feed)
+;    (handle-events! feed f)
+;    up-bus))
+;
+;(defn hub
+;  [name event-bus-down event-bus-up]
+;  (let [event-bus-down' (init-child->parent-bus! event-bus-down (fn [event]
+;                                                (async/put! os (str name " received from a child " event))))
+;        event-bus-up' (init-parent->child-bus! event-bus-up (fn [event]
+;                                                     (async/put! os (str name " received from a parent " event))))]
+;    [event-bus-down' event-bus-up']))
+;
+;(defn set-up
+;  [event-bus-down event-bus-up]
+;  (let [buses (hub "parent" event-bus-down event-bus-up)]
+;    (apply hub "child A" buses)
+;    (apply hub "child B" buses)))
+;
+;(def event-bus-down (root-event-bus))
+;(def event-bus-up (root-event-bus))
+;
+;
+;(def down-ch (first (set-up event-bus-down event-bus-up)))
+;
+;(trigger event-bus-up "up")
+;(trigger down-ch "down")
+
+
+; Bidirectional bus. Version 4.
+;
+;(defn handle-events!
+;  [ch f]
+;  (async/go-loop []
+;    (let [event (async/<! ch)]
+;      (when event
+;        (f event)
+;        (recur)))))
+;
+;(defprotocol IEventBus
+;  (get-mult [_])
+;  (trigger [_ event]))
+;
+;(defn root-event-bus
+;  ([]
+;    (root-event-bus (async/mult (async/chan))))
+;  ([mult]
+;    (reify
+;      IEventBus
+;      (get-mult [_]
+;        mult)
+;      (trigger [_ event]
+;        (async/put! (async/muxch* mult) event)))))
+;
+;(defn make-event-bus
+;  [in out feed]
+;  (async/tap out (async/muxch* in))
+;  (async/tap out feed)
+;  (reify
+;    IEventBus
+;    (get-mult [_]
+;      out)
+;    (trigger [_ event]
+;      (async/put! (async/muxch* out) event))))
+;
+;(defn init-parent->child-bus!
+;  [down-bus f]
+;  (let [feed (async/chan)
+;        up (async/mult (async/chan))
+;        down (get-mult down-bus)
+;        up-bus (make-event-bus up down feed)]
+;    (handle-events! feed f)
+;    up-bus))
+;
+;(defn init-child->parent-bus! [down-bus f]
+;  (let [feed (async/chan)
+;        up (async/mult (async/chan))
+;        down (get-mult down-bus)
+;        up-bus (make-event-bus down up feed)]
+;    (handle-events! feed f)
+;    up-bus))
+;
+;(defn hub
+;  [name event-bus-down event-bus-up]
+;  (let [event-bus-down' (init-child->parent-bus! event-bus-down (fn [event]
+;                                                                  (async/put! os (str name " received from a child " event))))
+;        event-bus-up' (init-parent->child-bus! event-bus-up (fn [event]
+;                                                              (async/put! os (str name " received from a parent " event))))]
+;    [event-bus-down' event-bus-up']))
+;
+;(defn set-up
+;  [event-bus-down event-bus-up]
+;  (let [buses (hub "parent" event-bus-down event-bus-up)]
+;    (apply hub "child A" buses)
+;    (apply hub "child B" buses)))
+;
+;(def event-bus-down (root-event-bus))
+;(def event-bus-up (root-event-bus))
+;
+;
+;(def down-ch (first (set-up event-bus-down event-bus-up)))
+;
+;(trigger event-bus-up "up")
+;(trigger down-ch "down")
+
+;; Bidirectional. Verison 5.
+;
+;(defn handle-events!
+;  [ch f]
+;  (async/go-loop []
+;    (let [event (async/<! ch)]
+;      (when event
+;        (f event)
+;        (recur)))))
+;
+;(defprotocol IEventBus
+;  (get-mult [_])
+;  (trigger [_ event])
+;  (shutdown [_]))
+;
+;(defn root-event-bus
+;  ([]
+;    (root-event-bus (async/mult (async/chan))))
+;  ([mult]
+;    (reify
+;      IEventBus
+;      (get-mult [_]
+;        mult)
+;      (trigger [_ event]
+;        (async/put! (async/muxch* mult) event))
+;      (shutdown [_]
+;        (async/untap-all mult)
+;        (async/close! (async/muxch* mult))))))
+;
+;(defn make-event-bus
+;  [down-bus order-f f]
+;  (let [feed (async/chan)
+;        up-mult (async/mult (async/chan))
+;        down-mult (get-mult down-bus)
+;        [source target] (order-f [down-mult up-mult])]
+;
+;    (async/tap source (async/muxch* target))
+;    (async/tap source feed)
+;    (handle-events! feed f)
+;    (reify
+;      IEventBus
+;      (get-mult [_]
+;        up-mult)
+;      (trigger [_ event]
+;        (async/put! (async/muxch* up-mult) event))
+;      (shutdown [_]
+;        (async/untap-all up-mult)
+;        (async/close! (async/muxch* up-mult))
+;        (async/close! feed)))))
+;
+;(defn init-parent->child-bus!
+;  [down-bus f]
+;  (let [up-bus (make-event-bus down-bus identity f)]
+;    up-bus))
+;
+;(defn init-child->parent-bus! [down-bus f]
+;  (let [up-bus (make-event-bus down-bus reverse f)]
+;    up-bus))
+;
+;(defn hub
+;  [name event-bus-down event-bus-up]
+;  (let [event-bus-down' (init-child->parent-bus! event-bus-down (fn [event]
+;                                                                  (async/put! os (str name " received from a child " event))))
+;        event-bus-up' (init-parent->child-bus! event-bus-up (fn [event]
+;                                                              (async/put! os (str name " received from a parent " event))))]
+;    [event-bus-down' event-bus-up']))
+;
+;(defn set-up
+;  [event-bus-down event-bus-up]
+;  (let [buses (hub "parent" event-bus-down event-bus-up)]
+;    (apply hub "child A" buses)
+;    (apply hub "child B" buses)))
+;
+;(def event-bus-down (root-event-bus))
+;(def event-bus-up (root-event-bus))
+;
+;
+;(def down-ch (first (set-up event-bus-down event-bus-up)))
+;
+;(trigger event-bus-up "up")
+;(trigger down-ch "down")
+
+
+;; Bidirectional. Verison 6.
+;
+;(defn handle-events!
+;  [ch f]
+;  (async/go-loop []
+;    (let [event (async/<! ch)]
+;      (when event
+;        (f event)
+;        (recur)))))
+;
+;(defprotocol IEventBus
+;  (get-mult [_])
+;  (trigger [_ event])
+;  (shutdown [_]))
+;
+;(defn root-event-bus
+;  ([]
+;    (root-event-bus (async/mult (async/chan))))
+;  ([mult]
+;    (reify
+;      IEventBus
+;      (get-mult [_]
+;        mult)
+;      (trigger [_ event]
+;        (async/put! (async/muxch* mult) event))
+;      (shutdown [_]
+;        (async/untap-all mult)
+;        (async/close! (async/muxch* mult))))))
+;
+;(defn make-event-bus
+;  [down-bus init-f]
+;  (let [feed (async/chan)
+;        up-mult (async/mult (async/chan))
+;        down-mult (get-mult down-bus)]
+;    (init-f down-mult up-mult feed)
+;    (reify
+;      IEventBus
+;      (get-mult [_]
+;        up-mult)
+;      (trigger [_ event]
+;        (async/put! (async/muxch* up-mult) event))
+;      (shutdown [_]
+;        (async/untap-all up-mult)
+;        (async/close! (async/muxch* up-mult))
+;        (async/close! feed)))))
+;
+;(defn parent->child-bus
+;  [down-bus f]
+;  (make-event-bus down-bus (fn [down up feed]
+;                             (async/tap down (async/muxch* up))
+;                             (async/tap down feed)
+;                             (handle-events! feed f))))
+;
+;(defn child->parent-bus [down-bus f]
+;  (make-event-bus down-bus (fn [down up feed]
+;                             (async/tap up (async/muxch* down))
+;                             (async/tap up feed)
+;                             (handle-events! feed f))))
+;
+;(defn hub
+;  [name event-bus-down event-bus-up]
+;  (let [event-bus-down' (child->parent-bus event-bus-down (fn [event]
+;                                                                  (async/put! os (str name " received from a child " event))))
+;        event-bus-up' (parent->child-bus event-bus-up (fn [event]
+;                                                              (async/put! os (str name " received from a parent " event))))]
+;    [event-bus-down' event-bus-up']))
+;
+;(defn set-up
+;  [event-bus-down event-bus-up]
+;  (let [buses (hub "parent" event-bus-down event-bus-up)]
+;    (apply hub "child A" buses)
+;    (apply hub "child B" buses)))
+;
+;(def event-bus-down (root-event-bus))
+;(def event-bus-up (root-event-bus))
+;
+;
+;(def down-ch (first (set-up event-bus-down event-bus-up)))
+;
+;(trigger event-bus-up "up")
+;(trigger down-ch "down")
+
+;; Bidirectional. Verison 7.
+;
+;(defn handle-events!
+;  [ch f]
+;  (async/go-loop []
+;    (let [event (async/<! ch)]
+;      (when event
+;        (f event)
+;        (recur)))))
+;
+;(defprotocol IEventBus
+;  (get-mult [_])
+;  (trigger [_ event])
+;  (shutdown [_]))
+;
+;(defn root-event-bus
+;  ([]
+;    (root-event-bus (async/mult (async/chan))))
+;  ([mult]
+;    (reify
+;      IEventBus
+;      (get-mult [_]
+;        mult)
+;      (trigger [_ event]
+;        (async/put! (async/muxch* mult) event))
+;      (shutdown [_]
+;        (async/untap-all mult)
+;        (async/close! (async/muxch* mult))))))
+;
+;(defn make-event-bus
+;  [down-bus init-f shutdown-f]
+;  (let [up-mult (async/mult (async/chan))
+;        down-mult (get-mult down-bus)]
+;    (init-f down-mult up-mult)
+;    (reify
+;      IEventBus
+;      (get-mult [_]
+;        up-mult)
+;      (trigger [_ event]
+;        (async/put! (async/muxch* up-mult) event))
+;      (shutdown [_]
+;        (async/untap-all up-mult)
+;        (async/close! (async/muxch* up-mult))
+;        (shutdown-f)))))
+;
+;(defn parent->child-bus
+;  [down-bus f]
+;  (let [feed (async/chan)]
+;    (make-event-bus down-bus
+;                    (fn [down up]
+;                      (async/tap down (async/muxch* up))
+;                      (async/tap down feed)
+;                      (handle-events! feed f))
+;                    (fn []
+;                      (async/close! feed)))))
+;
+;(defn child->parent-bus
+;  [down-bus f]
+;  (let [feed (async/chan)]
+;    (make-event-bus down-bus
+;                    (fn [down up]
+;                      (async/tap up (async/muxch* down))
+;                      (async/tap up feed)
+;                      (handle-events! feed f))
+;                    (fn []
+;                      (async/close! feed)))))
+;
+;(defn hub
+;  [name event-bus-down event-bus-up]
+;  (let [event-bus-down' (child->parent-bus event-bus-down (fn [event]
+;                                                            (async/put! os (str name " received from a child " event))))
+;        event-bus-up' (parent->child-bus event-bus-up (fn [event]
+;                                                        (async/put! os (str name " received from a parent " event))))]
+;    [event-bus-down' event-bus-up']))
+;
+;(defn set-up
+;  [event-bus-down event-bus-up]
+;  (let [buses (hub "parent" event-bus-down event-bus-up)]
+;    (apply hub "child A" buses)
+;    (apply hub "child B" buses)))
+;
+;(def event-bus-down (root-event-bus))
+;(def event-bus-up (root-event-bus))
+;
+;
+;(def down-ch (first (set-up event-bus-down event-bus-up)))
+;
+;(trigger event-bus-up "up")
+;(trigger down-ch "down")
+
+; Bidirectional. Verison 8.
+;
+;(defn handle-events!
+;  [ch f]
+;  (async/go-loop []
+;    (let [event (async/<! ch)]
+;      (when event
+;        (f event)
+;        (recur)))))
+;
+;(defprotocol IEventBus
+;  (tap [this ch])
+;  (sink [this bus])
+;  (trigger [this event])
+;  (shutdown [this]))
+;
+;(defn root-event-bus
+;  ([]
+;    (root-event-bus (async/mult (async/chan))))
+;  ([mult]
+;    (reify
+;      IEventBus
+;      (tap [_ ch]
+;        (async/tap mult ch))
+;      (sink [_ bus]
+;        (tap bus (async/muxch* mult)))
+;      (trigger [_ event]
+;        (async/put! (async/muxch* mult) event))
+;      (shutdown [_]
+;        (async/untap-all mult)
+;        (async/close! (async/muxch* mult))))))
+;
+;(defn make-event-bus
+;  [down-bus init-f shutdown-f]
+;  (let [up-mult (async/mult (async/chan))
+;        up-bus (reify
+;                 IEventBus
+;                 (tap [_ ch]
+;                   (async/tap up-mult ch))
+;                 (sink [_ bus]
+;                   (tap bus (async/muxch* up-mult)))
+;                 (trigger [_ event]
+;                   (async/put! (async/muxch* up-mult) event))
+;                 (shutdown [_]
+;                   (async/untap-all up-mult)
+;                   (async/close! (async/muxch* up-mult))
+;                   (shutdown-f)))]
+;    (init-f down-bus up-bus)
+;    up-bus))
+;
+;(defn parent->child-bus
+;  [down-bus f]
+;  (let [feed (async/chan)]
+;    (make-event-bus down-bus
+;                    (fn [down up]
+;                      (sink up down)
+;                      (tap down feed)
+;                      (handle-events! feed f))
+;                    (fn []
+;                      (async/close! feed)))))
+;
+;(defn child->parent-bus
+;  [down-bus f]
+;  (let [feed (async/chan)]
+;    (make-event-bus down-bus
+;                    (fn [down up]
+;                      (sink down up)
+;                      (tap up feed)
+;                      (handle-events! feed f))
+;                    (fn []
+;                      (async/close! feed)))))
+;
+;(defn hub
+;  [name event-bus-down event-bus-up]
+;  (let [event-bus-down' (child->parent-bus event-bus-down (fn [event]
+;                                                            (async/put! os (str name " received from a child " event))))
+;        event-bus-up' (parent->child-bus event-bus-up (fn [event]
+;                                                        (async/put! os (str name " received from a parent " event))))]
+;    [event-bus-down' event-bus-up']))
+;
+;(defn set-up
+;  [event-bus-down event-bus-up]
+;  (let [buses (hub "parent" event-bus-down event-bus-up)]
+;    (apply hub "child A" buses)
+;    (apply hub "child B" buses)))
+;
+;(def event-bus-down (root-event-bus))
+;(def event-bus-up (root-event-bus))
+;
+;
+;(def down-ch (first (set-up event-bus-down event-bus-up)))
+;
+;(trigger event-bus-up "up")
+;(trigger down-ch "down")
+;
+
+; Version 9
+;
+;(defn handle-events!
+;  [ch f]
+;  (async/go-loop []
+;    (let [event (async/<! ch)]
+;      (when event
+;        (f event)
+;        (recur)))))
+;
+;(defprotocol IEventBus
+;  (tap [this ch])
+;  (sink [this bus])
+;  (trigger [this event])
+;  (shutdown [this]))
+;
+;(defprotocol IEventRouter
+;  (route [_ down up])
+;  (unroute [_]))
+;
+;(defn root-event-bus
+;  ([]
+;    (root-event-bus (async/mult (async/chan))))
+;  ([mult]
+;    (reify
+;      IEventBus
+;      (tap [_ ch]
+;        (async/tap mult ch))
+;      (sink [_ bus]
+;        (tap bus (async/muxch* mult)))
+;      (trigger [_ event]
+;        (async/put! (async/muxch* mult) event))
+;      (shutdown [_]
+;        (async/untap-all mult)
+;        (async/close! (async/muxch* mult))))))
+;
+;(defn make-event-bus
+;  [down-bus router]
+;  (let [up-mult (async/mult (async/chan))
+;        up-bus (reify
+;                 IEventBus
+;                 (tap [_ ch]
+;                   (async/tap up-mult ch))
+;                 (sink [_ bus]
+;                   (tap bus (async/muxch* up-mult)))
+;                 (trigger [_ event]
+;                   (async/put! (async/muxch* up-mult) event))
+;                 (shutdown [_]
+;                   (async/untap-all up-mult)
+;                   (async/close! (async/muxch* up-mult))
+;                   (unroute router)))]
+;    (route router down-bus up-bus)
+;    up-bus))
+;
+;(defn parent->child
+;  [f]
+;  (let [feed (async/chan)]
+;    (reify
+;     IEventRouter
+;     (route [_ down up]
+;       (sink up down)
+;       (tap down feed)
+;       (handle-events! feed f))
+;     (unroute [_]
+;       (async/close! feed)))))
+;
+;(defn child->parent
+;  [f]
+;  (let [feed (async/chan)]
+;    (reify
+;     IEventRouter
+;     (route [_ down up]
+;       (sink down up)
+;       (tap up feed)
+;       (handle-events! feed f))
+;     (unroute [_]
+;       (async/close! feed)))))
+
+
+(defn hub
+  [name event-bus-down event-bus-up]
+  (let [event-bus-down' (make-event-bus event-bus-down (child->parent (fn [event]
+                                                          (async/put! os (str name " received from a child " event)))))
+        event-bus-up' (make-event-bus event-bus-up (parent->child (fn [event]
+                                                      (async/put! os (str name " received from a parent " event)))))]
+    [event-bus-down' event-bus-up']))
+
+(defn set-up
+  [event-bus-down event-bus-up]
+  (let [buses (hub "parent" event-bus-down event-bus-up)]
+    (apply hub "child A" buses)
+    (apply hub "child B" buses)))
+
+(def event-bus-down (root-event-bus))
+(def event-bus-up (root-event-bus))
+
+
+(def down-ch (first (set-up event-bus-down event-bus-up)))
+
+(trigger event-bus-up "up")
+(trigger down-ch "down")

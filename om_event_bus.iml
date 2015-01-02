@@ -9,8 +9,11 @@
       <sourceFolder url="file://$MODULE_DIR$/resources" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/examples/go_loop" />
+      <excludeFolder url="file://$MODULE_DIR$/examples/nested" />
       <excludeFolder url="file://$MODULE_DIR$/examples/simple" />
       <excludeFolder url="file://$MODULE_DIR$/examples/xform" />
+      <excludeFolder url="file://$MODULE_DIR$/resources/private/js" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="jdk" jdkName="1.8" jdkType="JavaSDK" />

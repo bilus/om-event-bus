@@ -10,30 +10,48 @@
 
 
             :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
-                      [lein-marginalia "0.8.0"]]
+                      [lein-marginalia "0.8.0"]
+                      [quickie "0.3.6"]
+                      [com.cemerick/clojurescript.test "0.3.3"]]
 
-            :cljsbuild {:builds [{:id           "simple"
-                                  :source-paths ["src" "examples/simple/src"]
+            :cljsbuild {:builds {:simple
+                                 {:source-paths ["src" "examples/simple/src"]
                                   :compiler     {:output-to     "examples/simple/main.js"
                                                  :output-dir    "examples/simple/out"
                                                  :source-map    true
                                                  :optimizations :none}}
-                                 {:id           "xform"
-                                  :source-paths ["src" "examples/xform/src"]
+                                 :xform
+                                 {:source-paths ["src" "examples/xform/src"]
                                   :compiler     {:output-to     "examples/xform/main.js"
                                                  :output-dir    "examples/xform/out"
                                                  :source-map    true
                                                  :optimizations :none}}
-                                 {:id           "go_loop"
-                                  :source-paths ["src" "examples/go_loop/src"]
+                                 :go_loop
+                                 {:source-paths ["src" "examples/go_loop/src"]
                                   :compiler     {:output-to     "examples/go_loop/main.js"
                                                  :output-dir    "examples/go_loop/out"
                                                  :source-map    true
                                                  :optimizations :none}}
-                                 {:id           "nested"
-                                  :source-paths ["src" "examples/nested/src"]
+                                 :nested
+                                 {:source-paths ["src" "examples/nested/src"]
                                   :compiler     {:output-to     "examples/nested/main.js"
                                                  :output-dir    "examples/nested/out"
                                                  :source-map    true
-                                                 :optimizations :none}}]})
+                                                 :optimizations :none}}
+
+                                 :test
+                                 {:source-paths ["src" "test"]
+
+                                  ;:notify-command ["phantomjs" :runner
+                                  ;                 "this.literal_js_was_evaluated=true"
+                                  ;                 "resources/private/js/react/react.js"
+                                  ;                 "resources/private/js/unit-tests.js"]
+                                  :compiler     {:preamble ["react/react.min.js"]
+                                                 :output-to     "resources/private/js/unit-tests.js"
+                                                 :optimizations :whitespace
+                                                 :pretty-print  true}}}
+                        :test-commands {"unit" ["phantomjs" :runner
+                                                      "this.literal_js_was_evaluated=true"
+                                                      "resources/private/js/react/react.js"
+                                                      "resources/private/js/unit-tests.js"]}})
 
