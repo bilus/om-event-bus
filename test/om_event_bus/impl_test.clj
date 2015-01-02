@@ -58,8 +58,8 @@
       (is (timeout? (take! ch))))))
 
 (deftest sending-downstream
-  (let [down (event-bus)
-        up (event-bus down (downstream-router (fn [_])))
+  (let [down (event-bus (downstream-router))
+        up (expand-up down)
         down-out (async/chan 1024)
         up-out (async/chan 1024)]
     (tap down down-out)
@@ -74,8 +74,8 @@
       (is (timeout? (take! down-out))))))
 
 (deftest sending-upstream
-  (let [down (event-bus)
-        up (event-bus down (upstream-router (fn [_])))
+  (let [down (event-bus (upstream-router))
+        up (expand-up down)
         down-out (async/chan 1024)
         up-out (async/chan 1024)]
     (tap down down-out)
@@ -91,27 +91,28 @@
       (is (timeout? (take! up-out))))))
 
 (deftest event-handler
-  (let [parent (event-bus)
+  (let [parent (event-bus (upstream-router))
         os (async/chan 1024)
-        child (event-bus parent (upstream-router (fn [ev]
-                                                (async/put! os (str "Received " ev)))))]
+        child (expand-up parent (fn [ev]
+                                  (async/put! os (str "Received " ev))))]
     (testing "triggering"
       (route-event parent "event")
       (is (= "Received event" (take! os))))))
 
 (defn hub
   [os name event-bus-down event-bus-up]
-  (let [event-bus-down' (event-bus event-bus-down (downstream-router (fn [event]
-                                                                       (async/put! os (str name " received '" event "' from a child")))))
-        event-bus-up' (event-bus event-bus-up (upstream-router (fn [event]
-                                                                 (async/put! os (str name " received '" event "' from a parent")))))]
+  (println name event-bus-down event-bus-up)
+  (let [event-bus-down' (expand-up event-bus-down #_(fn [event]
+                                                    (async/put! os (str name " received '" event "' from a child"))))
+        event-bus-up' (expand-up event-bus-up #_(fn [event]
+                                                (async/put! os (str name " received '" event "' from a parent"))))]
     [event-bus-down' event-bus-up']))
 
 (defn set-up
   []
   (let [os (async/chan 1024)
-        event-bus-down (event-bus)
-        event-bus-up (event-bus)
+        event-bus-down (event-bus (downstream-router))
+        event-bus-up (event-bus (upstream-router))
         buses (hub os "parent" event-bus-down event-bus-up)]
     {:os os
      :broadcast event-bus-up
