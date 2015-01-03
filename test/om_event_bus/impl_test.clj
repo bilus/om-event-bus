@@ -143,3 +143,14 @@
         (is (= (sort ["child A received 'event' from a parent"
                       "child B received 'event' from a parent"])
                (sort (take-all! os))))))))
+
+(deftest xforms)
+
+; TODO: xforms
+; TODO: Attempt to use in core (downstream only).
+; TODO: Use upstream in core.
+; TODO: Add interfaces: IGotUpstreamEvent IGotDownstreamEvent. Make it work.
+; TODO: Update documentation in core.
+; TODO: Write documentation for impl.
+; TODO: Write an example for sending messages upstream.
+; TODO: Update idealist (coordination between sortables).
