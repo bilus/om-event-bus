@@ -29,7 +29,7 @@
 
 ;=======================================================================================================================
 
-(deftest single-leg
+(deftest bus
   (let [bus (event-bus)
         ch (async/chan 1024)]
     (tap bus ch)
@@ -40,6 +40,27 @@
       (shutdown bus)
       (route-event bus "event")
       (is (timeout? (take! ch))))))
+
+(deftest two-legs
+  (let [bus (event-bus (downstream-router))
+        parent (add-leg bus)
+        child (add-leg parent)
+        pch (async/chan 1024)
+        cch (async/chan 1024)]
+    (tap parent pch)
+    (tap child cch)
+    (testing "triggering"
+      (route-event bus "event")
+      (is (= ["event"] (take-all! pch)))
+      (is (= ["event"] (take-all! cch))))
+    (testing "shutdown"
+      (shutdown child)
+      (route-event bus "event")
+      (tap parent pch)                                      ;; Need to tap again because shutdown untaps all.
+      (is (= ["event"] (take-all! pch)))
+      (shutdown bus)
+      (tap parent pch)                                      ;; Need to tap again because shutdown untaps all.
+      (is (timeout? (take! pch))))))
 
 (deftest sending-downstream
   (let [os (async/chan 1024)

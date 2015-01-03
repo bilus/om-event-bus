@@ -6,7 +6,8 @@
             :dependencies [[org.clojure/clojure "1.6.0"]
                            [org.clojure/clojurescript "0.0-2505" :scope "provided"]
                            [org.clojure/core.async "0.1.346.0-17112a-alpha" :scope "provided"]
-                           [om "0.8.0-beta5" :scope "provided"]]
+                           [om "0.8.0-beta5" :scope "provided"]
+                           #_[org.clojure/tools.trace "0.7.8" :scope "provided"]]
 
 
             :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]

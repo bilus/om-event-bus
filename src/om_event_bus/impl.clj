@@ -8,7 +8,8 @@
   (sink [this bus])
   (route-event [_ ev])
   (put [this event])
-  (add-fork [this] [this handler])
+  (add-leg [this])
+  (add-fork [this handler])
   (shutdown [this]))
 
 (defprotocol IEventRouter
@@ -30,8 +31,8 @@
   ([]
     (event-bus (downstream-router)))
   ([router]
-    (event-bus router (async/mult (async/chan))))
-  ([router mult]
+    (event-bus router (async/mult (async/chan)) true))
+  ([router mult close]
     (let [bus (reify
             IEventBus
             (tap [_ ch]
@@ -40,11 +41,14 @@
               (tap bus (async/muxch* mult)))
             (add-fork [this handler]
               (event-bus-fork this router handler))
+            (add-leg [this]
+              (event-bus router mult false))
             (put [_ event]
               (async/put! (async/muxch* mult) event))
             (shutdown [_]
               (async/untap-all mult)
-              (async/close! (async/muxch* mult)))
+              (when close
+                (async/close! (async/muxch* mult))))
             (route-event [this event]
               (put this event)))]
       bus)))
@@ -65,6 +69,8 @@
                      (async/put! (async/muxch* up-mult) event))
                    (add-fork [this handler]
                      (event-bus-fork this router handler))
+                   (add-leg [this]
+                     (event-bus router up-mult false))
                    (shutdown [_]
                      (async/untap-all up-mult)
                      (async/close! (async/muxch* up-mult))
