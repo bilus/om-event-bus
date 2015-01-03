@@ -24,7 +24,6 @@
     <orderEntry type="library" scope="PROVIDED" name="Leiningen: org.clojure/clojurescript:0.0-2505" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Leiningen: org.clojure/core.async:0.1.346.0-17112a-alpha" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/tools.nrepl:0.2.3" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Leiningen: org.clojure/tools.trace:0.7.8" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Leiningen: com.facebook/react:0.12.2.1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Leiningen: com.google.javascript/closure-compiler:v20140625" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Leiningen: org.clojure/data.json:0.2.3" level="project" />
