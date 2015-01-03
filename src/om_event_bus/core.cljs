@@ -10,10 +10,11 @@
 ;;
 (ns om-event-bus.core
   (:require [om.core :as om :include-macros true]
-            [cljs.core.async :as async])
+            [cljs.core.async :as async]
+            [om-event-bus.descriptor :as d])
   (:require-macros [cljs.core.async.macros :as async]))
 
-(declare make-descriptor init-event-bus! shutdown-event-bus! trace)
+(declare init-event-bus! shutdown-event-bus! trace)
 
 ; =============================================================================
 ;; ### Protocols
@@ -68,18 +69,18 @@
                      (let [x (async/<! event-bus)]
                        (when x (recur))))))
   ([f value options event-bus]
-    (let [descriptor (make-descriptor {:componentWillMount
-                                       (fn [this super]
-                                         (init-event-bus! this)
-                                         (super))
-                                       :componentWillUnmount
-                                       (fn [this super]
-                                         (shutdown-event-bus! this)
-                                         (super))
-                                       :render
-                                       (fn [this super]
-                                         (binding [*parent* this]
-                                           (super)))})]
+    (let [descriptor (d/make-descriptor {:componentWillMount
+                                         (fn [this super]
+                                           (init-event-bus! this)
+                                           (super))
+                                         :componentWillUnmount
+                                         (fn [this super]
+                                           (shutdown-event-bus! this)
+                                           (super))
+                                         :render
+                                         (fn [this super]
+                                           (binding [*parent* this]
+                                             (super)))})]
       (om/root f value
               (merge options {:instrument (fn [f x m]
                                             (let [parent-bus (or
@@ -184,47 +185,6 @@
   (if xform
     (first (reduce (xform conj) [] [event]))
     event))
-
-; =============================================================================
-;; ### Custom om component descriptor
-
-(defn- around-method
-  "Overrides a pure method by wrapping it in f."
-  [method methods f]
-  (let [prev-method (method methods)]
-    (-> methods
-        (assoc method #(this-as this
-                                (do
-                                   (f this (fn []
-                                             (.call prev-method this)))))))))
-
-(defn- extend-pure-methods
-  "Given pure methods and a map of overrides, it extends pure methods with new lifecycle methods.
-
-  Example:
-
-  <pre><code>
-  (extend-pure-methods
-    {:render (fn [this super]
-                ;; Do something.
-                (super))}) ;; Call the original method.
-  </pre></code>
-
-  You can also specify a map of pure methods as the first argument."
-  ([new-methods]
-    (extend-pure-methods om/pure-methods new-methods))
-  ([methods new-methods]
-    (loop [methods' methods [[new-method-name new-method-fn] & new-methods'] (seq new-methods)]
-      (if new-method-name
-        (recur (around-method new-method-name methods' new-method-fn) new-methods')
-        methods'))))
-
-(defn- make-descriptor
-  "Creates a custom descriptor with support for an event bus."
-  [new-methods]
-  (let [methods (extend-pure-methods new-methods)
-        descriptor (om/specify-state-methods! (clj->js methods))]
-    descriptor))
 
 ;; ### Debugging
 
