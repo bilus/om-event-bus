@@ -27,6 +27,9 @@
   [ch]
   (doall (take-while some? (repeatedly #(safe-take! ch)))))
 
+(defn matches? [expected actual]
+  (= (sort expected) (sort actual)))
+
 ;=======================================================================================================================
 
 (deftest bus
@@ -76,8 +79,8 @@
 
     (testing "triggering"
       (trigger grandchild "event")
-      (is (= (sort ["[child] event" "[parent] event"])
-             (sort (take-all! os)))))
+      (is (matches? ["[child] event" "[parent] event"]
+                           (take-all! os))))
     (testing "shutdown"
       (shutdown parent)
       (trigger grandchild "event")
@@ -91,14 +94,14 @@
         grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))))]
     (testing "triggering"
       (trigger bus "event")
-      (is (= (sort ["[grandchild] event" "[child] event" "[parent] event"])
-             (sort (take-all! os)))))
+      (is (matches? ["[grandchild] event" "[child] event" "[parent] event"]
+                    (take-all! os))))
 
     (testing "shutdown"
       (shutdown child)
       (trigger bus "event")
-      (is (= (sort ["[parent] event"])
-             (sort (take-all! os)))))))
+      (is (matches? ["[parent] event"]
+                    (take-all! os))))))
 
 (deftest event-handler
   (let [parent (event-bus (upstream-router))
@@ -133,24 +136,24 @@
     (testing "broadcasting to all"
      (let [{:keys [os broadcast]} (set-up)]
        (trigger broadcast "event")
-       (is (= (sort ["parent received 'event' from a parent"
-                     "child A received 'event' from a parent"
-                     "child B received 'event' from a parent"])
-              (sort (take-all! os))))))
+       (is (matches? ["parent received 'event' from a parent"
+                      "child A received 'event' from a parent"
+                      "child B received 'event' from a parent"]
+                     (take-all! os)))))
 
     (testing "sending down from child"
       (let [{:keys [os child-a-down]} (set-up)]
         (trigger child-a-down "event")
-        (is (= (sort ["parent received 'event' from a child"])
-               (sort (take-all! os))))))
+        (is (matches? ["parent received 'event' from a child"]
+                      (take-all! os)))))
 
     (testing "sending up from parent"
       (let [{:keys [os parent-up]} (set-up)]
         (trigger parent-up "event")
 
-        (is (= (sort ["child A received 'event' from a parent"
-                      "child B received 'event' from a parent"])
-               (sort (take-all! os))))))))
+        (is (matches? ["child A received 'event' from a parent"
+                       "child B received 'event' from a parent"]
+                      (take-all! os)))))))
 
 (deftest xforms
   (letfn [(mapping
@@ -170,9 +173,9 @@
             grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))
             top (add-leg grandchild)]
         (trigger grandchild "event")
-        (is (= (sort ["[child] event (pass grandchild)"
-                      "[parent] event (pass grandchild) (pass child)"])
-               (sort (take-all! os))))))
+        (is (matches? ["[child] event (pass grandchild)"
+                       "[parent] event (pass grandchild) (pass child)"]
+                      (take-all! os)))))
 
     (testing "upstream forks"
       (let [os (async/chan 1024)
@@ -181,10 +184,10 @@
             child (add-fork parent (fn [e] (async/put! os (str "[child] " e))) (add-info " (pass child)"))
             grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
         (trigger bottom "event")
-        (is (= (sort ["[grandchild] event (pass parent) (pass child)"
-                      "[child] event (pass parent)"
-                      "[parent] event"])
-               (sort (take-all! os))))))
+        (is (matches? ["[grandchild] event (pass parent) (pass child)"
+                       "[child] event (pass parent)"
+                       "[parent] event"]
+                      (take-all! os)))))
 
     (testing "downstream legs"
       (let [os (async/chan 1024)
@@ -193,8 +196,8 @@
             child (add-leg parent (add-info " (pass child)"))
             grandchild (add-leg child (add-info " (pass grandchild)"))]
         (trigger grandchild "event")
-        (is (= (sort ["[parent] event (pass grandchild) (pass child)"])
-               (sort (take-all! os))))))
+        (is (matches? ["[parent] event (pass grandchild) (pass child)"]
+                      (take-all! os)))))
 
     (testing "upstream legs"
       (let [os (async/chan 1024)
@@ -203,11 +206,9 @@
             child (add-leg parent (add-info " (pass child)"))
             grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
         (trigger bottom "event")
-        (is (= (sort ["[grandchild] event (pass parent) (pass child)"])
-               (sort (take-all! os))))))))
+        (is (matches? ["[grandchild] event (pass parent) (pass child)"]
+                      (take-all! os)))))))
 
-; TODO: Remove resolve-route and refactor the code.
-; TODO: refactor matching os so (sort ...) isn't necessary.
 ; TODO: Attempt to use in core (downstream only).
 ; TODO: Move descriptor-related code to om-event-bus.descriptor.
 ; TODO: Use upstream in core.
