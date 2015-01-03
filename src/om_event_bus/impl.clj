@@ -39,7 +39,7 @@
                 (tap bus (async/muxch* mult)))
               (add-fork [this handler]
                 (event-bus-fork this router handler))
-              (add-leg [this]
+              (add-leg [_]
                 (event-bus-leg router mult))
               (put [_ event]
                 (async/put! (async/muxch* mult) event))
@@ -56,7 +56,7 @@
     (event-bus-fork down-bus router nil))
   ([down-bus router handler]
     (let [event-feed (async/chan)
-          up-mult (async/mult (async/chan))
+          up-mult (async/mult (async/chan))                 ; TODO: xform
           up-bus (reify
                    IEventBus
                    (tap [_ ch]
@@ -65,16 +65,16 @@
                      (tap bus (async/muxch* up-mult)))
                    (put [_ event]
                      (async/put! (async/muxch* up-mult) event))
-                   (add-fork [this handler]
+                   (add-fork [this handler]                 ; TODO: Arity 3 version for xform.
                      (event-bus-fork this router handler))
                    (add-leg [_]
-                     (event-bus-leg router up-mult))
+                     (event-bus-leg router down-bus))        ; TODO: Arity 2 version for xform.
                    (shutdown [_]
                      (async/untap-all up-mult)
                      (async/close! (async/muxch* up-mult))
                      (async/close! event-feed))
                    (route-event [this event]
-                     (put (resolve-route router down-bus this) event)))]
+                     (put (resolve-route router down-bus this) event)))] ; TODO: xform
       (leg router down-bus up-bus)
       (fork router down-bus up-bus event-feed)
       (handle-events! event-feed handler)

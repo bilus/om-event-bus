@@ -42,7 +42,7 @@
       (is (timeout? (take! ch))))))
 
 (deftest two-legs
-  (let [bus (event-bus (downstream-router))
+  (let [bus (event-bus (upstream-router))
         parent (add-leg bus)
         child (add-leg parent)
         pch (async/chan 1024)
@@ -55,11 +55,12 @@
       (is (= ["event"] (take-all! cch))))
     (testing "shutdown"
       (shutdown child)
-      (route-event bus "event")
       (tap parent pch)                                      ;; Need to tap again because shutdown untaps all.
+      (route-event parent "event")
       (is (= ["event"] (take-all! pch)))
       (shutdown bus)
       (tap parent pch)                                      ;; Need to tap again because shutdown untaps all.
+      (route-event parent "event")
       (is (timeout? (take! pch))))))
 
 (deftest sending-downstream
@@ -146,6 +147,7 @@
 
 (deftest xforms)
 
+; TODO: test adding leg from a fork (was bug in event-bus-fork/add-leg)
 ; TODO: xforms
 ; TODO: Attempt to use in core (downstream only).
 ; TODO: Move descriptor-related code to om-event-bus.descriptor.
@@ -154,4 +156,5 @@
 ; TODO: Update documentation in core.
 ; TODO: Write documentation for impl.
 ; TODO: Write an example for sending messages upstream.
+; TODO: Write an example about broadcasting to all components within a tree.
 ; TODO: Update idealist (coordination between sortables).
