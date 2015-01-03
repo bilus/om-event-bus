@@ -209,8 +209,8 @@
         (is (matches? ["[grandchild] event (pass parent) (pass child)"]
                       (take-all! os)))))))
 
-; TODO: Attempt to use in core (downstream only).
 ; TODO: Move descriptor-related code to om-event-bus.descriptor.
+; TODO: Attempt to use in core (downstream only).
 ; TODO: Use upstream in core.
 ; TODO: Add interfaces: IGotUpstreamEvent IGotDownstreamEvent. Make it work.
 ; TODO: Update documentation in core.
