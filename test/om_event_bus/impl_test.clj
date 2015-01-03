@@ -41,7 +41,6 @@
       (route-event bus "event")
       (is (timeout? (take! ch))))))
 
-
 (deftest sending-downstream
   (let [os (async/chan 1024)
         bus (event-bus (downstream-router))
@@ -73,8 +72,6 @@
       (is (= (sort ["[parent] event"])
              (sort (take-all! os)))))))
 
-
-
 (deftest event-handler
   (let [parent (event-bus (upstream-router))
         os (async/chan 1024)
@@ -84,44 +81,44 @@
       (route-event parent "event")
       (is (= ["[child] event"] (take-all! os))))))
 
-(defn hub
-  [os name event-bus-down event-bus-up]
-  (let [event-bus-down' (add-fork event-bus-down (fn [event]
-                                                    (async/put! os (str name " received '" event "' from a child"))))
-        event-bus-up' (add-fork event-bus-up (fn [event]
-                                                (async/put! os (str name " received '" event "' from a parent"))))]
-    [event-bus-down' event-bus-up']))
-
-(defn set-up
-  []
-  (let [os (async/chan 1024)
-        event-bus-down (event-bus (downstream-router))
-        event-bus-up (event-bus (upstream-router))
-        buses (hub os "parent" event-bus-down event-bus-up)]
-    {:os os
-     :broadcast event-bus-up
-     :parent-up (second buses)
-     :child-a-down (first (apply hub os "child A" buses))
-     :child-b-down (first (apply hub os "child B" buses))}))
-;
 (deftest tree-structure
-  (testing "broadcasting to all"
-    (let [{:keys [os broadcast]} (set-up)]
-      (route-event broadcast "event")
-      (is (= (sort ["parent received 'event' from a parent"
-                    "child A received 'event' from a parent"
-                    "child B received 'event' from a parent"])
-             (sort (take-all! os))))))
-  (testing "sending down from child"
-    (let [{:keys [os child-a-down]} (set-up)]
-      (route-event child-a-down "event")
-      (is (= (sort ["parent received 'event' from a child"])
-             (sort (take-all! os))))))
+  (letfn [(hub
+            [os name event-bus-down event-bus-up]
+            (let [event-bus-down' (add-fork event-bus-down (fn [event]
+                                                             (async/put! os (str name " received '" event "' from a child"))))
+                  event-bus-up' (add-fork event-bus-up (fn [event]
+                                                         (async/put! os (str name " received '" event "' from a parent"))))]
+              [event-bus-down' event-bus-up']))
 
-  (testing "sending up from parent"
-    (let [{:keys [os parent-up]} (set-up)]
-      (route-event parent-up "event")
+          (set-up
+            []
+            (let [os (async/chan 1024)
+                  event-bus-down (event-bus (downstream-router))
+                  event-bus-up (event-bus (upstream-router))
+                  buses (hub os "parent" event-bus-down event-bus-up)]
+              {:os           os
+               :broadcast    event-bus-up
+               :parent-up    (second buses)
+               :child-a-down (first (apply hub os "child A" buses))
+               :child-b-down (first (apply hub os "child B" buses))}))]
 
-      (is (= (sort ["child A received 'event' from a parent"
-                    "child B received 'event' from a parent"])
-             (sort (take-all! os)))))))
+    (testing "broadcasting to all"
+     (let [{:keys [os broadcast]} (set-up)]
+       (route-event broadcast "event")
+       (is (= (sort ["parent received 'event' from a parent"
+                     "child A received 'event' from a parent"
+                     "child B received 'event' from a parent"])
+              (sort (take-all! os))))))
+    (testing "sending down from child"
+      (let [{:keys [os child-a-down]} (set-up)]
+        (route-event child-a-down "event")
+        (is (= (sort ["parent received 'event' from a child"])
+               (sort (take-all! os))))))
+
+    (testing "sending up from parent"
+      (let [{:keys [os parent-up]} (set-up)]
+        (route-event parent-up "event")
+
+        (is (= (sort ["child A received 'event' from a parent"
+                      "child B received 'event' from a parent"])
+               (sort (take-all! os))))))))
