@@ -35,12 +35,12 @@
     (tap bus ch)
 
     (testing "triggering"
-      (route-event bus "event")
+      (trigger bus "event")
       (is (= ["event"] (take-all! ch))))
 
     (testing "shutdown"
       (shutdown bus)
-      (route-event bus "event")
+      (trigger bus "event")
       (is (timeout? (take! ch))))))
 
 (deftest two-legs
@@ -53,18 +53,18 @@
     (tap child cch)
 
     (testing "triggering"
-      (route-event bus "event")
+      (trigger bus "event")
       (is (= ["event"] (take-all! pch)))
       (is (= ["event"] (take-all! cch))))
 
     (testing "shutdown"
       (shutdown child)
       (tap parent pch)                                      ;; Need to tap again because shutdown untaps all.
-      (route-event parent "event")
+      (trigger parent "event")
       (is (= ["event"] (take-all! pch)))
       (shutdown bus)
       (tap parent pch)                                      ;; Need to tap again because shutdown untaps all.
-      (route-event parent "event")
+      (trigger parent "event")
       (is (timeout? (take! pch))))))
 
 (deftest sending-downstream
@@ -75,12 +75,12 @@
         grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))))]
 
     (testing "triggering"
-      (route-event grandchild "event")
+      (trigger grandchild "event")
       (is (= (sort ["[child] event" "[parent] event"])
              (sort (take-all! os)))))
     (testing "shutdown"
       (shutdown parent)
-      (route-event grandchild "event")
+      (trigger grandchild "event")
       (is (= ["[child] event"] (take-all! os))))))
 
 (deftest sending-upstream
@@ -90,13 +90,13 @@
         child (add-fork parent (fn [e] (async/put! os (str "[child] " e))))
         grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))))]
     (testing "triggering"
-      (route-event bus "event")
+      (trigger bus "event")
       (is (= (sort ["[grandchild] event" "[child] event" "[parent] event"])
              (sort (take-all! os)))))
 
     (testing "shutdown"
       (shutdown child)
-      (route-event bus "event")
+      (trigger bus "event")
       (is (= (sort ["[parent] event"])
              (sort (take-all! os)))))))
 
@@ -106,7 +106,7 @@
         child (add-fork parent (fn [ev]
                                   (async/put! os (str "[child] " ev))))]
     (testing "triggering"
-      (route-event parent "event")
+      (trigger parent "event")
       (is (= ["[child] event"] (take-all! os))))))
 
 (deftest tree-structure
@@ -132,7 +132,7 @@
 
     (testing "broadcasting to all"
      (let [{:keys [os broadcast]} (set-up)]
-       (route-event broadcast "event")
+       (trigger broadcast "event")
        (is (= (sort ["parent received 'event' from a parent"
                      "child A received 'event' from a parent"
                      "child B received 'event' from a parent"])
@@ -140,13 +140,13 @@
 
     (testing "sending down from child"
       (let [{:keys [os child-a-down]} (set-up)]
-        (route-event child-a-down "event")
+        (trigger child-a-down "event")
         (is (= (sort ["parent received 'event' from a child"])
                (sort (take-all! os))))))
 
     (testing "sending up from parent"
       (let [{:keys [os parent-up]} (set-up)]
-        (route-event parent-up "event")
+        (trigger parent-up "event")
 
         (is (= (sort ["child A received 'event' from a parent"
                       "child B received 'event' from a parent"])
@@ -169,7 +169,7 @@
             child (add-fork parent (fn [e] (async/put! os (str "[child] " e))) (add-info " (pass child)"))
             grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))
             top (add-leg grandchild)]
-        (route-event grandchild "event")
+        (trigger grandchild "event")
         (is (= (sort ["[child] event (pass grandchild)"
                       "[parent] event (pass grandchild) (pass child)"])
                (sort (take-all! os))))))
@@ -180,7 +180,7 @@
             parent (add-fork bottom (fn [e] (async/put! os (str "[parent] " e))) (add-info " (pass parent)"))
             child (add-fork parent (fn [e] (async/put! os (str "[child] " e))) (add-info " (pass child)"))
             grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
-        (route-event bottom "event")
+        (trigger bottom "event")
         (is (= (sort ["[grandchild] event (pass parent) (pass child)"
                       "[child] event (pass parent)"
                       "[parent] event"])
@@ -192,7 +192,7 @@
             parent (add-fork bottom (fn [e] (async/put! os (str "[parent] " e))) (add-info " (pass parent)"))
             child (add-leg parent (add-info " (pass child)"))
             grandchild (add-leg child (add-info " (pass grandchild)"))]
-        (route-event grandchild "event")
+        (trigger grandchild "event")
         (is (= (sort ["[parent] event (pass grandchild) (pass child)"])
                (sort (take-all! os))))))
 
@@ -202,7 +202,7 @@
             parent (add-leg bottom (add-info " (pass parent)"))
             child (add-leg parent (add-info " (pass child)"))
             grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
-        (route-event bottom "event")
+        (trigger bottom "event")
         (is (= (sort ["[grandchild] event (pass parent) (pass child)"])
                (sort (take-all! os))))))))
 
