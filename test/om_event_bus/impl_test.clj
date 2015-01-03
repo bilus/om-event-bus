@@ -145,10 +145,45 @@
                       "child B received 'event' from a parent"])
                (sort (take-all! os))))))))
 
-(deftest xforms)
+(deftest xforms
+  (letfn [(mapping
+            [f]
+            (fn [reducing]
+              (fn [result input]
+                (reducing result (f input)))))
+          (add-info
+            [info]
+            (mapping #(str % info)))]
+    (testing "downstream forks"
+      (let [os (async/chan 1024)
+            bus (event-bus (downstream-router))
+            parent (add-fork bus (fn [e] (async/put! os (str "[parent] " e))) (add-info " (pass parent)"))
+            child (add-fork parent (fn [e] (async/put! os (str "[child] " e))) (add-info " (pass child)"))
+            grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))
+            top (add-leg grandchild)]
+        (route-event grandchild "event")
+        (is (= (sort ["[child] event (pass grandchild)"
+                      "[parent] event (pass grandchild) (pass child)"])
+               (sort (take-all! os))))))
 
-; TODO: test adding leg from a fork (was bug in event-bus-fork/add-leg)
+    (testing "upstream forks"
+      (let [os (async/chan 1024)
+            bottom (event-bus (upstream-router))
+            parent (add-fork bottom (fn [e] (async/put! os (str "[parent] " e))) (add-info " (pass parent)"))
+            child (add-fork parent (fn [e] (async/put! os (str "[child] " e))) (add-info " (pass child)"))
+            grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
+        (route-event bottom "event")
+        (is (= (sort ["[grandchild] event (pass parent) (pass child)"
+                      "[child] event (pass parent)"
+                      "[parent] event"])
+               (sort (take-all! os))))))
+    (testing "downstream legs")
+    (testing "upstream legs")
+    (testing "downstream misc")
+    (testing "upstream misc")))
+
 ; TODO: xforms
+; TODO: test adding leg from a fork (was bug in event-bus-fork/add-leg)
 ; TODO: Attempt to use in core (downstream only).
 ; TODO: Move descriptor-related code to om-event-bus.descriptor.
 ; TODO: Use upstream in core.
