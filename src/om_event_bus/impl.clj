@@ -17,41 +17,39 @@
   (fork [_ down up ch])
   (resolve-route [_ down up]))
 
-(defn handle-events!
-  [ch f]
-  (async/go-loop []
-    (let [event (async/<! ch)]
-      (when event
-        (f event)
-        (recur)))))
-
-(declare downstream-router event-bus-fork)
+(declare downstream-router event-bus-leg event-bus-fork -build-event-bus handle-events!)
 
 (defn event-bus
   ([]
     (event-bus (downstream-router)))
   ([router]
-    (event-bus router (async/mult (async/chan)) true))
-  ([router mult close]
-    (let [bus (reify
-            IEventBus
-            (tap [_ ch]
-              (async/tap mult ch))
-            (sink [_ bus]
-              (tap bus (async/muxch* mult)))
-            (add-fork [this handler]
-              (event-bus-fork this router handler))
-            (add-leg [this]
-              (event-bus router mult false))
-            (put [_ event]
-              (async/put! (async/muxch* mult) event))
-            (shutdown [_]
-              (async/untap-all mult)
-              (when close
-                (async/close! (async/muxch* mult))))
-            (route-event [this event]
-              (put this event)))]
-      bus)))
+    (-build-event-bus router (async/mult (async/chan)) true)))
+
+(defn event-bus-leg
+  [router mult]
+  (-build-event-bus router mult false))
+
+(defn -build-event-bus
+  [router mult close]
+  (let [bus (reify
+              IEventBus
+              (tap [_ ch]
+                (async/tap mult ch))
+              (sink [_ bus]
+                (tap bus (async/muxch* mult)))
+              (add-fork [this handler]
+                (event-bus-fork this router handler))
+              (add-leg [this]
+                (event-bus-leg router mult))
+              (put [_ event]
+                (async/put! (async/muxch* mult) event))
+              (shutdown [_]
+                (async/untap-all mult)
+                (when close
+                  (async/close! (async/muxch* mult))))
+              (route-event [this event]
+                (put this event)))]
+    bus))
 
 (defn event-bus-fork
   ([down-bus router]
@@ -69,8 +67,8 @@
                      (async/put! (async/muxch* up-mult) event))
                    (add-fork [this handler]
                      (event-bus-fork this router handler))
-                   (add-leg [this]
-                     (event-bus router up-mult false))
+                   (add-leg [_]
+                     (event-bus-leg router up-mult))
                    (shutdown [_]
                      (async/untap-all up-mult)
                      (async/close! (async/muxch* up-mult))
@@ -104,9 +102,10 @@
     (resolve-route [_ down _]
       down)))
 
-
-
-;; TODO: Write tests.
-;; TODO: Allow IEventBus to extend itself so components have no knowledge of that.
-;; TODO: Add support for xforms.
-;; TODO: See if trigger (of ITrigger) can be used on owner and bus to make it more consistent (see om/specify-state-methods!).
+(defn handle-events!
+  [ch f]
+  (async/go-loop []
+    (let [event (async/<! ch)]
+      (when event
+        (f event)
+        (recur)))))
