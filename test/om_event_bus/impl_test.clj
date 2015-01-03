@@ -2,7 +2,7 @@
   (:require [om-event-bus.impl :refer :all]
             [clojure.test :refer :all]
             [clojure.core.async :as async]
-            [clojure.tools.trace :as t]))
+            #_[clojure.tools.trace :as t]))
 
 (defn safe-take!
   [ch]
@@ -33,9 +33,11 @@
   (let [bus (event-bus)
         ch (async/chan 1024)]
     (tap bus ch)
+
     (testing "triggering"
       (route-event bus "event")
       (is (= ["event"] (take-all! ch))))
+
     (testing "shutdown"
       (shutdown bus)
       (route-event bus "event")
@@ -49,10 +51,12 @@
         cch (async/chan 1024)]
     (tap parent pch)
     (tap child cch)
+
     (testing "triggering"
       (route-event bus "event")
       (is (= ["event"] (take-all! pch)))
       (is (= ["event"] (take-all! cch))))
+
     (testing "shutdown"
       (shutdown child)
       (tap parent pch)                                      ;; Need to tap again because shutdown untaps all.
@@ -69,6 +73,7 @@
         parent (add-fork bus (fn [e] (async/put! os (str "[parent] " e))))
         child (add-fork parent (fn [e] (async/put! os (str "[child] " e))))
         grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))))]
+
     (testing "triggering"
       (route-event grandchild "event")
       (is (= (sort ["[child] event" "[parent] event"])
@@ -88,6 +93,7 @@
       (route-event bus "event")
       (is (= (sort ["[grandchild] event" "[child] event" "[parent] event"])
              (sort (take-all! os)))))
+
     (testing "shutdown"
       (shutdown child)
       (route-event bus "event")
@@ -131,6 +137,7 @@
                      "child A received 'event' from a parent"
                      "child B received 'event' from a parent"])
               (sort (take-all! os))))))
+
     (testing "sending down from child"
       (let [{:keys [os child-a-down]} (set-up)]
         (route-event child-a-down "event")
@@ -154,6 +161,7 @@
           (add-info
             [info]
             (mapping #(str % info)))]
+
     (testing "downstream forks"
       (let [os (async/chan 1024)
             bus (event-bus (downstream-router))
@@ -177,13 +185,29 @@
                       "[child] event (pass parent)"
                       "[parent] event"])
                (sort (take-all! os))))))
-    (testing "downstream legs")
-    (testing "upstream legs")
-    (testing "downstream misc")
-    (testing "upstream misc")))
 
-; TODO: xforms
-; TODO: test adding leg from a fork (was bug in event-bus-fork/add-leg)
+    (testing "downstream legs"
+      (let [os (async/chan 1024)
+            bottom (event-bus (downstream-router))
+            parent (add-fork bottom (fn [e] (async/put! os (str "[parent] " e))) (add-info " (pass parent)"))
+            child (add-leg parent (add-info " (pass child)"))
+            grandchild (add-leg child (add-info " (pass grandchild)"))]
+        (route-event grandchild "event")
+        (is (= (sort ["[parent] event (pass grandchild) (pass child)"])
+               (sort (take-all! os))))))
+
+    (testing "upstream legs"
+      (let [os (async/chan 1024)
+            bottom (event-bus (upstream-router))
+            parent (add-leg bottom (add-info " (pass parent)"))
+            child (add-leg parent (add-info " (pass child)"))
+            grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
+        (route-event bottom "event")
+        (is (= (sort ["[grandchild] event (pass parent) (pass child)"])
+               (sort (take-all! os))))))))
+
+; TODO: Remove resolve-route and refactor the code.
+; TODO: refactor matching os so (sort ...) isn't necessary.
 ; TODO: Attempt to use in core (downstream only).
 ; TODO: Move descriptor-related code to om-event-bus.descriptor.
 ; TODO: Use upstream in core.
