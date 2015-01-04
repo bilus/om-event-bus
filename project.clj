@@ -9,7 +9,7 @@
                            [om "0.8.0-beta5" :scope "provided"]
                            #_[org.clojure/tools.trace "0.7.8" :scope "provided"]]
 
-            :source-paths ["src/clj" "target/generated"]
+            :source-paths ["src" "target/generated"]
 
             :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
                       [lein-marginalia "0.8.0"]
@@ -38,34 +38,34 @@
                              :injections [(require 'pjstadig.humane-test-output)
                                           (pjstadig.humane-test-output/activate!)]}}
 
-            :cljx {:builds [{:source-paths ["src/cljx"]
+            :cljx {:builds [{:source-paths ["src"]
                              :output-path "target/generated"
                              :rules :clj}
 
-                            {:source-paths ["src/cljx"]
+                            {:source-paths ["src"]
                              :output-path "target/generated"
                              :rules :cljs}]}
 
             :cljsbuild {:builds {:simple
-                                 {:source-paths ["examples/simple/src" "src/cljs" "target/generated/"]
+                                 {:source-paths ["examples/simple/src" "src" "target/generated/"]
                                   :compiler     {:output-to     "examples/simple/main.js"
                                                  :output-dir    "examples/simple/out"
                                                  :source-map    true
                                                  :optimizations :none}}
                                  :xform
-                                 {:source-paths ["src" "examples/xform/src" "src/cljs" "target/generated/"]
+                                 {:source-paths ["src" "examples/xform/src" "src" "target/generated/"]
                                   :compiler     {:output-to     "examples/xform/main.js"
                                                  :output-dir    "examples/xform/out"
                                                  :source-map    true
                                                  :optimizations :none}}
                                  :go_loop
-                                 {:source-paths ["src" "examples/go_loop/src" "src/cljs" "target/generated/"]
+                                 {:source-paths ["src" "examples/go_loop/src" "src" "target/generated/"]
                                   :compiler     {:output-to     "examples/go_loop/main.js"
                                                  :output-dir    "examples/go_loop/out"
                                                  :source-map    true
                                                  :optimizations :none}}
                                  :nested
-                                 {:source-paths ["src" "examples/nested/src" "src/cljs" "target/generated/"]
+                                 {:source-paths ["src" "examples/nested/src" "src" "target/generated/"]
                                   :compiler     {:output-to     "examples/nested/main.js"
                                                  :output-dir    "examples/nested/out"
                                                  :source-map    true
