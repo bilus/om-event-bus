@@ -90,6 +90,37 @@
                                                                  (update-in [:init-state] merge {::event-bus parent-bus})
                                                                  (merge {:descriptor descriptor})))))})))))
 
+(defn root<>
+  ([f value options]
+    (root<> f value options nil))
+  ([f value options out-event-ch]
+    (let [event-buses {:downstream (impl/event-bus (impl/downstream-router))
+                       :upstream (impl/event-bus (impl/upstream-router))}
+          descriptor (d/make-descriptor {:componentWillMount
+                                         (fn [this super]
+                                           (init-event-bus! this)
+                                           (super))
+                                         :componentWillUnmount
+                                         (fn [this super]
+                                           (shutdown-event-bus! this)
+                                           (super))
+                                         :render
+                                         (fn [this super]
+                                           (binding [*parent* this]
+                                             (super)))})]
+      (when out-event-ch
+        (if-let [downstream-bus (:downstream event-buses)]
+          (impl/tap downstream-bus out-event-ch)
+          (throw (js/Error. "Downstream event bus not available. Make sure to use root> or root<>."))))
+      (om/root f value
+               (merge options {:instrument (fn [f x m]
+                                             (let [parent-buses (or
+                                                                (and *parent* (om/get-state *parent* ::event-buses))
+                                                                event-buses)]
+                                               (om/build* f x (-> m
+                                                                  (update-in [:init-state] merge {::event-buses parent-buses})
+                                                                  (merge {:descriptor descriptor})))))})))))
+
 ; =============================================================================
 ;; ### Triggering events.
 
@@ -99,7 +130,15 @@
   Note that `event` can be any data structure, there are no restrictions in this respect though for future compatibility,
   a map is recommended."
   [owner event]
-  (let [event-bus (om/get-state owner ::event-bus)]
+  (let [event-bus (:downstream (om/get-state owner ::event-buses))]
+    (impl/trigger event-bus event))
+  nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
+        ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
+        ; as appropriate."
+
+(defn bubble
+  [owner event]
+  (let [event-bus (:upstream (om/get-state owner ::event-buses))]
     (impl/trigger event-bus event))
   nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
         ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
@@ -131,19 +170,22 @@
    Please note that this mult/tap magic happens only if the component reifies the `IGotEvent` protocol and, to some
    extend, for `IInitEventBus` protocol as well. For components that don't care about events, overhead is minimal."
   [this]
-  (let [down (om/get-state this ::event-bus)
-        c (om/children this)
+  (let [c (om/children this)
         {:keys [xform buf-or-n]} (merge default-config
                                         (when (satisfies? IInitEventBus c)
                                           (init-event-bus c)))
         handler (when (satisfies? IGotEvent c)
                   (partial got-event c))]
+
     (impl/with-options {:buf-or-n buf-or-n}
                        (om/set-state! this
-                                      ::event-bus
-                                      (if handler
-                                        (impl/add-fork down handler xform)
-                                        (impl/add-leg down xform))))))
+                                      ::event-buses
+                                      (into {}
+                                            (for [[k bus] (om/get-state this ::event-buses)]
+                                              [k (if handler
+                                                   (impl/add-fork bus handler xform)
+                                                   (impl/add-leg bus xform))]))))
+    (println om/get-state this ::event-buses)))
 
 
 (defn- shutdown-event-bus!
@@ -151,5 +193,6 @@
    It simply calls `shutdown` on the event bus set up in `init-event-bus!` above.
    This terminates the go loop handling events."
   [this]
-  (impl/shutdown (om/get-state this ::event-bus))
-  (om/set-state! this ::event-bus nil))                  ; TODO: Set to nil-event-bus reporting meaningful errors.
+  (doseq [[bus _] (om/get-state this ::event-buses)]
+    (impl/shutdown bus))
+  (om/set-state! this ::event-buses nil))                  ; TODO: Set each to nil-event-bus reporting meaningful errors.

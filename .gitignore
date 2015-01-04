@@ -24,3 +24,5 @@ examples/go_loop/out/*
 examples/go_loop/main.js
 examples/nested/out/*
 examples/nested/main.js
+examples/disable/out/*
+examples/disable/main.js

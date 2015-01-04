@@ -69,5 +69,11 @@
                                   :compiler     {:output-to     "examples/nested/main.js"
                                                  :output-dir    "examples/nested/out"
                                                  :source-map    true
+                                                 :optimizations :none}}
+                                 :disable
+                                 {:source-paths ["src" "examples/disable/src" "src" "target/generated/"]
+                                  :compiler     {:output-to     "examples/disable/main.js"
+                                                 :output-dir    "examples/disable/out"
+                                                 :source-map    true
                                                  :optimizations :none}}}})
 
