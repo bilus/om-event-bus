@@ -30,9 +30,14 @@
 (defn matches? [expected actual]
   (= (sort expected) (sort actual)))
 
+(defn wrap [f wrapper-f]
+  (fn [& args]
+    (apply wrapper-f args)
+    (apply f args)))
+
 ;=======================================================================================================================
 
-(deftest bus
+(deftest test-bus
   (let [bus (event-bus)
         ch (async/chan 1024)]
     (tap bus ch)
@@ -46,7 +51,7 @@
       (trigger bus "event")
       (is (timeout? (take! ch))))))
 
-(deftest two-legs
+(deftest test-two-legs
   (let [bus (event-bus (upstream-router))
         parent (add-leg bus)
         child (add-leg parent)
@@ -70,7 +75,7 @@
       (trigger parent "event")
       (is (timeout? (take! pch))))))
 
-(deftest sending-downstream
+(deftest test-sending-downstream
   (let [os (async/chan 1024)
         bus (event-bus (downstream-router))
         parent (add-fork bus (fn [e] (async/put! os (str "[parent] " e))))
@@ -86,7 +91,7 @@
       (trigger grandchild "event")
       (is (= ["[child] event"] (take-all! os))))))
 
-(deftest sending-upstream
+(deftest test-sending-upstream
   (let [os (async/chan 1024)
         bus (event-bus (upstream-router))
         parent (add-fork bus (fn [e] (async/put! os (str "[parent] " e))))
@@ -103,7 +108,7 @@
       (is (matches? ["[parent] event"]
                     (take-all! os))))))
 
-(deftest event-handler
+(deftest test-event-handler
   (let [parent (event-bus (upstream-router))
         os (async/chan 1024)
         child (add-fork parent (fn [ev]
@@ -112,7 +117,7 @@
       (trigger parent "event")
       (is (= ["[child] event"] (take-all! os))))))
 
-(deftest tree-structure
+(deftest test-tree-structure
   (letfn [(hub
             [os name event-bus-down event-bus-up]
             (let [event-bus-down' (add-fork event-bus-down (fn [event]
@@ -155,7 +160,7 @@
                        "child B received 'event' from a parent"]
                       (take-all! os)))))))
 
-(deftest xforms
+(deftest test-xform
   (letfn [(mapping
             [f]
             (fn [reducing]
@@ -209,7 +214,24 @@
         (is (matches? ["[grandchild] event (pass parent) (pass child)"]
                       (take-all! os)))))))
 
+
+(deftest test-with-options
+  (testing "buffer size"
+    (let [buf-sizes (atom [])]
+      (with-redefs [async/chan (wrap async/chan
+                                     (fn [buf-size & args]
+                                       (swap! buf-sizes conj buf-size)))]
+        (with-options {:buf-or-n 666}
+                      (let [bus (event-bus (downstream-router))
+                            parent (add-fork bus (fn [_] ()))
+                            child (add-leg parent)]
+                        (is (= (distinct @buf-sizes) [666 1])))))))) ; core.async creates chans of size 1 internally
+
 ; TODO: Attempt to use in core (downstream only).
+  ; TODO: Port to cljx.
+  ; TODO: Make tests pass.
+  ; TODO: Make examples work.
+
 ; TODO: Use upstream in core.
 ; TODO: Add interfaces: IGotUpstreamEvent IGotDownstreamEvent. Make it work.
 ; TODO: Update documentation in core.
@@ -217,3 +239,6 @@
 ; TODO: Write an example for sending messages upstream.
 ; TODO: Write an example about broadcasting to all components within a tree.
 ; TODO: Update idealist (coordination between sortables).
+; TODO: Make sure that for two om roots, after one root is killed, the top-level go-loop
+;       collecting events from event bus common to both roots, keeps receiving events from
+;       the remaining root.
