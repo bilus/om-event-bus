@@ -227,11 +227,6 @@
                             child (add-leg parent)]
                         (is (= [666 1] (distinct @buf-sizes))))))))) ; core.async creates chans of size 1 internally
 
-; TODO: Attempt to use in core (downstream only).
-  ; TODO: Port to cljx.
-  ; TODO: Make tests pass.
-  ; TODO: Make examples work.
-
 ; TODO: Use in idealist.
 
 ; TODO: Use upstream in core.
