@@ -33,8 +33,7 @@
                       "build-all" [["do" ["clean"] ["cljx" "once"] ["cljsbuild" "once"]]]
                       "build-auto" ["do" ["clean"] ["cljx" "once"] ["cljsbuild" "auto"]]}
 
-            :profiles {:clj {:dependencies [[com.taoensso/timbre "3.2.1"]
-                                            [pjstadig/humane-test-output "0.6.0"]]
+            :profiles {:clj {:dependencies [[pjstadig/humane-test-output "0.6.0"]]
                              :test-paths ["test/clj" "target/generated/test/clj"]
                              :injections [(require 'pjstadig.humane-test-output)
                                           (pjstadig.humane-test-output/activate!)]}}

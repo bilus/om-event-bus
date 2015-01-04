@@ -2,7 +2,6 @@
   (:require [om-event-bus.impl :refer :all]
             [clojure.test :refer :all]
             [clojure.core.async :as async]
-            [om-event-bus.macros :refer [with-options]]
             #_[clojure.tools.trace :as t]))
 
 (defn safe-take!

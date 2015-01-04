@@ -1,6 +1,22 @@
 (ns om-event-bus.impl
-  (:require [clojure.test :refer :all]
-            [clojure.core.async :as async]))
+  #+clj
+  (:require [clojure.core.async :as async])
+  #+cljs
+  (:require [cljs.core.async :as async])
+  #+cljs
+  (:require-macros [cljs.core.async.macros :as async]
+    [om-event-bus.impl :refer [options]]))
+
+(def ^:dynamic *options* {:buf-or-n 1})
+
+(defmacro with-options
+  [opts & body]
+  `(binding [*options* (merge *options* ~opts)]
+     ~@body))
+
+(defmacro options
+  []
+  `*options*)
 
 (defprotocol ITriggerEvent
   (trigger [_ event]))
@@ -18,20 +34,13 @@
   (leg [_ down mid-ch up])
   (fork [_ down up ch]))
 
-(def ^:dynamic *options* {:buf-or-n 1})
-
-(defmacro with-options
-  [options & body]
-  `(binding [*options* (merge *options* ~options)]
-     ~@body))
-
 (declare downstream-router event-bus-leg extend-event-bus -build-event-bus handle-events! maybe-apply-xform)
 
 (defn event-bus
   ([]
     (event-bus (downstream-router)))
   ([router]
-    (-build-event-bus router (async/mult (async/chan (:buf-or-n *options*))) true)))
+    (-build-event-bus router (async/mult (async/chan (:buf-or-n (options)))) true)))
 
 (defn pass-event-bus
   [router mult]
@@ -68,9 +77,9 @@
   ([down-bus router handler]
     (extend-event-bus down-bus router handler nil))
   ([down-bus router handler xform]
-    (let [event-feed (when handler (async/chan (:buf-or-n *options*)))
-          up-mult (async/mult (async/chan (:buf-or-n *options*)))
-          mid-ch (apply async/chan (:buf-or-n *options*) (if xform [xform] []))
+    (let [event-feed (when handler (async/chan (:buf-or-n (options))))
+          up-mult (async/mult (async/chan (:buf-or-n (options))))
+          mid-ch (apply async/chan (:buf-or-n (options)) (if xform [xform] []))
           up-bus (reify
                    IEventBus
                    (tap [_ ch]
