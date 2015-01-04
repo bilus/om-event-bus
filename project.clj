@@ -1,4 +1,4 @@
-(defproject om-event-bus "0.1.2-SNAPSHOT"
+(defproject om-event-bus "0.2.0-SNAPSHOT"
             :description "Simple custom events for Om."
             :url "http://github.com/bilus/om-event-bus"
             :license {:name "Eclipse Public License"
@@ -9,11 +9,14 @@
                            [om "0.8.0-beta5" :scope "provided"]
                            #_[org.clojure/tools.trace "0.7.8" :scope "provided"]]
 
+            :source-paths ["src/clj" "target/generated"]
 
             :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
                       [lein-marginalia "0.8.0"]
                       [quickie "0.3.6"]
-                      [com.cemerick/clojurescript.test "0.3.3"]]
+                      [com.keminglabs/cljx "0.5.0"]]
+
+            :prep-tasks [["cljx" "once"]]
 
             :clean-targets ["examples/simple/main.js"
                             "examples/simple/out"
@@ -22,46 +25,50 @@
                             "examples/go_loop/main.js"
                             "examples/go_loop/out"
                             "examples/nested/main.js"
-                            "examples/nested/out"]
+                            "examples/nested/out"
+                            "target/"]
+
+            :aliases {"quickie" ["with-profile" "clj" "quickie"]
+                      "deploy" ["do" ["clean"] ["cljx" "once"] ["deploy" "clojars"]]
+                      "build-all" [["do" ["clean"] ["cljx" "once"] ["cljsbuild" "once"]]]
+                      "build-auto" ["do" ["clean"] ["cljx" "once"] ["cljsbuild" "auto"]]}
+
+            :profiles {:clj {:dependencies [[com.taoensso/timbre "3.2.1"]
+                                            [pjstadig/humane-test-output "0.6.0"]]
+                             :test-paths ["test/clj" "target/generated/test/clj"]
+                             :injections [(require 'pjstadig.humane-test-output)
+                                          (pjstadig.humane-test-output/activate!)]}}
+
+            :cljx {:builds [{:source-paths ["src/cljx"]
+                             :output-path "target/generated"
+                             :rules :clj}
+
+                            {:source-paths ["src/cljx"]
+                             :output-path "target/generated"
+                             :rules :cljs}]}
 
             :cljsbuild {:builds {:simple
-                                 {:source-paths ["src" "examples/simple/src"]
+                                 {:source-paths ["examples/simple/src" "src/cljs" "target/generated/"]
                                   :compiler     {:output-to     "examples/simple/main.js"
                                                  :output-dir    "examples/simple/out"
                                                  :source-map    true
                                                  :optimizations :none}}
                                  :xform
-                                 {:source-paths ["src" "examples/xform/src"]
+                                 {:source-paths ["src" "examples/xform/src" "src/cljs" "target/generated/"]
                                   :compiler     {:output-to     "examples/xform/main.js"
                                                  :output-dir    "examples/xform/out"
                                                  :source-map    true
                                                  :optimizations :none}}
                                  :go_loop
-                                 {:source-paths ["src" "examples/go_loop/src"]
+                                 {:source-paths ["src" "examples/go_loop/src" "src/cljs" "target/generated/"]
                                   :compiler     {:output-to     "examples/go_loop/main.js"
                                                  :output-dir    "examples/go_loop/out"
                                                  :source-map    true
                                                  :optimizations :none}}
                                  :nested
-                                 {:source-paths ["src" "examples/nested/src"]
+                                 {:source-paths ["src" "examples/nested/src" "src/cljs" "target/generated/"]
                                   :compiler     {:output-to     "examples/nested/main.js"
                                                  :output-dir    "examples/nested/out"
                                                  :source-map    true
-                                                 :optimizations :none}}
-
-                                 :test
-                                 {:source-paths ["src" "test"]
-
-                                  ;:notify-command ["phantomjs" :runner
-                                  ;                 "this.literal_js_was_evaluated=true"
-                                  ;                 "resources/private/js/react/react.js"
-                                  ;                 "resources/private/js/unit-tests.js"]
-                                  :compiler     {:preamble ["react/react.min.js"]
-                                                 :output-to     "resources/private/js/unit-tests.js"
-                                                 :optimizations :whitespace
-                                                 :pretty-print  true}}}
-                        :test-commands {"unit" ["phantomjs" :runner
-                                                      "this.literal_js_was_evaluated=true"
-                                                      "resources/private/js/react/react.js"
-                                                      "resources/private/js/unit-tests.js"]}})
+                                                 :optimizations :none}}}})
 

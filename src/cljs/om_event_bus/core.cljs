@@ -11,8 +11,10 @@
 (ns om-event-bus.core
   (:require [om.core :as om :include-macros true]
             [cljs.core.async :as async]
+            [om-event-bus.impl :as impl]
             [om-event-bus.descriptor :as d])
-  (:require-macros [cljs.core.async.macros :as async]))
+  (:require-macros [cljs.core.async.macros :as async]
+                   [om-event-bus.impl :as impl]))
 
 (declare init-event-bus! shutdown-event-bus! trace)
 
@@ -48,13 +50,13 @@
 (defn root>
   "Use `root>` instead of om.core/root to add support for event bus functionality to all components.
 
-  The arity 4 version lets you specify the channel if you also want to handle events outside of component hierarchy.
+  The arity 4 version lets you specify a channel if you also want to handle events outside of component hierarchy.
 
-  **IMPORTANT:** If you pass your own event bus channel, you **MUST** consume events.
+  **IMPORTANT:** If you pass a channel to receive events through, you **MUST** consume events.
 
   Here's what the `root>` function does:
 
-  1. It intercepts calls to build (via `:instrument`) to pass on event bus channels from parent components to their
+  1. It intercepts calls to build (via `:instrument`) to pass on event buses from parent components to their
   children (via local state).
 
   2. It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
@@ -62,14 +64,10 @@
 
   3. It passes the custom descriptor to `om.core/build*`."
   ([f value options]
-    (let [event-bus (async/chan 1)]
-      (root> f value options event-bus)
-      ;; Consume events to make sure async/mult delivers to all taps.
-      (async/go-loop []
-                     (let [x (async/<! event-bus)]
-                       (when x (recur))))))
-  ([f value options event-bus]
-    (let [descriptor (d/make-descriptor {:componentWillMount
+    (root> f value options nil))
+  ([f value options out-event-ch]
+    (let [event-bus (impl/event-bus (impl/downstream-router))
+          descriptor (d/make-descriptor {:componentWillMount
                                          (fn [this super]
                                            (init-event-bus! this)
                                            (super))
@@ -81,6 +79,8 @@
                                          (fn [this super]
                                            (binding [*parent* this]
                                              (super)))})]
+      (when out-event-ch
+        (impl/tap event-bus out-event-ch))
       (om/root f value
               (merge options {:instrument (fn [f x m]
                                             (let [parent-bus (or
@@ -99,8 +99,8 @@
   Note that `event` can be any data structure, there are no restrictions in this respect though for future compatibility,
   a map is recommended."
   [owner event]
-  (let [trigger-fn (om/get-state owner ::trigger-fn)]
-    (trigger-fn event))
+  (let [event-bus (om/get-state owner ::event-bus)]
+    (impl/trigger event-bus event))
   nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
         ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
         ; as appropriate."
@@ -110,8 +110,6 @@
 ;; ### Looking for feedback
 ;; Please make sure to send your critique to [gyamtso@gmail.com](mailto:gyamtso@gmail.com) or tweet me **@martinbilski**.
 
-
-(declare maybe-apply-xform)
 
 ; =============================================================================
 ;; # Internals
@@ -124,73 +122,34 @@
 
    It is called from when a component mounts (see `root>` above).
 
-   What it does is it takes the event bus from its parent component (`downstream`) and using `core.async/mult`
-   it taps into it to fork it into two branches: `branch` this component may use to handle events and
-   `upstream` to pass on to child components (see `root>` above).
+   What it does is it takes the event bus from its parent component (`down`) and extends it, either by forking it
+   to handle events (if the component reifies `IGotEvent`) or by creating a 'leg' of the bus with minimal overhead.
 
-   It does sets the local state:
-   ::trigger-fn  -  function that triggers an event;
-   ::event-bus   -  core.async channel to be passed to the component's children (see `root>` above).
-
-   **IMPORTANT:** Do not use the local state values directly; they are for internal use only.
+   It sets local state:
+   ::event-bus   -  the event bus segment.
 
    Please note that this mult/tap magic happens only if the component reifies the `IGotEvent` protocol and, to some
    extend, for `IInitEventBus` protocol as well. For components that don't care about events, overhead is minimal."
   [this]
-  (trace "Initializing event bus for" (om/id this))
-  (let [downstream (om/get-state this ::event-bus)
+  (let [down (om/get-state this ::event-bus)
         c (om/children this)
         {:keys [xform buf-or-n]} (merge default-config
                                         (when (satisfies? IInitEventBus c)
-                                          (or (init-event-bus c) {})))]
-    (om/set-state! this ::trigger-fn (fn [event]
-                                       (async/put! downstream (maybe-apply-xform xform event))))
-    (when (or (satisfies? IGotEvent c) xform)
-      (let [upstream (async/chan buf-or-n xform)
-            branch (async/chan buf-or-n)
-            fork (async/mult upstream)]
-        (om/set-state! this ::close-fn (fn []
-                                         (async/untap-all fork)
-                                         (async/close! upstream)
-                                         (async/close! branch)))
-        (om/set-state! this ::event-bus upstream)
-        (async/tap fork downstream)
-        (when (satisfies? IGotEvent c)
-          (async/tap fork branch)
-          (async/go-loop []
-                         (let [[event ch] (async/alts! [branch (async/timeout 5000)])] ;; TODO: Remove this code.
-                           (if event
-                             (do
-                               (got-event c event)
-                               (recur))
-                             (when (not= ch branch)
-                               (trace (om/id this) "is listening...")
-                               (recur))))))))))
+                                          (init-event-bus c)))
+        handler (when (satisfies? IGotEvent c)
+                  (partial got-event c))]
+    (impl/with-options {:buf-or-n buf-or-n}
+                       (om/set-state! this
+                                      ::event-bus
+                                      (if handler
+                                        (impl/add-fork down handler xform)
+                                        (impl/add-leg down xform))))))
+
 
 (defn- shutdown-event-bus!
-  "This function mainly shuts down event bus channels for this component.
-   It simply calls `::close-fn` set up in `init-event-bus!` above. This also terminates `go-loop` handling events."
+  "This function mainly shuts down event bus for this component.
+   It simply calls `shutdown` on the event bus set up in `init-event-bus!` above.
+   This terminates the go loop handling events."
   [this]
-  (om/set-state! this ::trigger-fn #(throw (js/Error. "Event bus has already been shut down.")))
-  (let [c (om/children this)
-        close-fn (om/get-state this ::close-fn)]
-    (when (satisfies? IGotEvent c)
-      (trace "Shutting down event bus for" (om/id this))
-      (close-fn))))
-
-(defn- maybe-apply-xform
-  "For an xform it returns the result of applying xform to an event.
-  If xform is nil it returns unmodified event."
-  [xform event]
-  (if xform
-    (first (reduce (xform conj) [] [event]))
-    event))
-
-;; ### Debugging
-
-(defn trace
-  "Uncomment this to get status information printed to JS console.
-
-  Note: Uses println."
-  [& args]
-  #_(apply println args))
+  (impl/shutdown (om/get-state this ::event-bus))
+  (om/set-state! this ::event-bus nil))                  ; TODO: Set to nil-event-bus reporting meaningful errors.

@@ -2,6 +2,7 @@
   (:require [om-event-bus.impl :refer :all]
             [clojure.test :refer :all]
             [clojure.core.async :as async]
+            [om-event-bus.macros :refer [with-options]]
             #_[clojure.tools.trace :as t]))
 
 (defn safe-take!
@@ -225,12 +226,14 @@
                       (let [bus (event-bus (downstream-router))
                             parent (add-fork bus (fn [_] ()))
                             child (add-leg parent)]
-                        (is (= (distinct @buf-sizes) [666 1])))))))) ; core.async creates chans of size 1 internally
+                        (is (= [666 1] (distinct @buf-sizes))))))))) ; core.async creates chans of size 1 internally
 
 ; TODO: Attempt to use in core (downstream only).
   ; TODO: Port to cljx.
   ; TODO: Make tests pass.
   ; TODO: Make examples work.
+
+; TODO: Use in idealist.
 
 ; TODO: Use upstream in core.
 ; TODO: Add interfaces: IGotUpstreamEvent IGotDownstreamEvent. Make it work.
@@ -240,5 +243,11 @@
 ; TODO: Write an example about broadcasting to all components within a tree.
 ; TODO: Update idealist (coordination between sortables).
 ; TODO: Make sure that for two om roots, after one root is killed, the top-level go-loop
+
+; TODO: Build marginalia docs.
+; TODO: Build examples and copy them to gh-pages branch.
+
+
+
 ;       collecting events from event bus common to both roots, keeps receiving events from
 ;       the remaining root.
