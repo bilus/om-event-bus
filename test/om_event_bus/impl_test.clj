@@ -52,7 +52,7 @@
       (is (timeout? (take! ch))))))
 
 (deftest test-two-legs
-  (let [bus (event-bus (upstream-router))
+  (let [bus (event-bus (trickling-router))
         parent (add-leg bus)
         child (add-leg parent)
         pch (async/chan 1024)
@@ -75,9 +75,9 @@
       (trigger parent "event")
       (is (timeout? (take! pch))))))
 
-(deftest test-sending-downstream
+(deftest test-bubbling
   (let [os (async/chan 1024)
-        bus (event-bus (downstream-router))
+        bus (event-bus (bubbling-router))
         parent (add-fork bus (fn [e] (async/put! os (str "[parent] " e))))
         child (add-fork parent (fn [e] (async/put! os (str "[child] " e))))
         grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))))]
@@ -91,9 +91,9 @@
       (trigger grandchild "event")
       (is (= ["[child] event"] (take-all! os))))))
 
-(deftest test-sending-upstream
+(deftest test-trickling
   (let [os (async/chan 1024)
-        bus (event-bus (upstream-router))
+        bus (event-bus (trickling-router))
         parent (add-fork bus (fn [e] (async/put! os (str "[parent] " e))))
         child (add-fork parent (fn [e] (async/put! os (str "[child] " e))))
         grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))))]
@@ -109,7 +109,7 @@
                     (take-all! os))))))
 
 (deftest test-event-handler
-  (let [parent (event-bus (upstream-router))
+  (let [parent (event-bus (trickling-router))
         os (async/chan 1024)
         child (add-fork parent (fn [ev]
                                   (async/put! os (str "[child] " ev))))]
@@ -119,24 +119,24 @@
 
 (deftest test-tree-structure
   (letfn [(hub
-            [os name event-bus-down event-bus-up]
-            (let [event-bus-down' (add-fork event-bus-down (fn [event]
+            [os name bubbling-bus trickling-bus]
+            (let [bubbling-bus' (add-fork bubbling-bus (fn [event]
                                                              (async/put! os (str name " received '" event "' from a child"))))
-                  event-bus-up' (add-fork event-bus-up (fn [event]
+                  trickling-bus' (add-fork trickling-bus (fn [event]
                                                          (async/put! os (str name " received '" event "' from a parent"))))]
-              [event-bus-down' event-bus-up']))
+              [bubbling-bus' trickling-bus']))
 
           (set-up
             []
             (let [os (async/chan 1024)
-                  event-bus-down (event-bus (downstream-router))
-                  event-bus-up (event-bus (upstream-router))
-                  buses (hub os "parent" event-bus-down event-bus-up)]
+                  bubbling-bus (event-bus (bubbling-router))
+                  trickling-bus (event-bus (trickling-router))
+                  buses (hub os "parent" bubbling-bus trickling-bus)]
               {:os           os
-               :broadcast    event-bus-up
-               :parent-up    (second buses)
-               :child-a-down (first (apply hub os "child A" buses))
-               :child-b-down (first (apply hub os "child B" buses))}))]
+               :broadcast    trickling-bus
+               :parent-trickle    (second buses)
+               :child-a-bubble (first (apply hub os "child A" buses))
+               :child-b-bubble (first (apply hub os "child B" buses))}))]
 
     (testing "broadcasting to all"
      (let [{:keys [os broadcast]} (set-up)]
@@ -146,15 +146,15 @@
                       "child B received 'event' from a parent"]
                      (take-all! os)))))
 
-    (testing "sending down from child"
-      (let [{:keys [os child-a-down]} (set-up)]
-        (trigger child-a-down "event")
+    (testing "bubbling from child"
+      (let [{:keys [os child-a-bubble]} (set-up)]
+        (trigger child-a-bubble "event")
         (is (matches? ["parent received 'event' from a child"]
                       (take-all! os)))))
 
-    (testing "sending up from parent"
-      (let [{:keys [os parent-up]} (set-up)]
-        (trigger parent-up "event")
+    (testing "trickling from parent"
+      (let [{:keys [os parent-trickle]} (set-up)]
+        (trigger parent-trickle "event")
 
         (is (matches? ["child A received 'event' from a parent"
                        "child B received 'event' from a parent"]
@@ -170,47 +170,47 @@
             [info]
             (mapping #(str % info)))]
 
-    (testing "downstream forks"
+    (testing "bubbling bus forks"
       (let [os (async/chan 1024)
-            bus (event-bus (downstream-router))
+            bus (event-bus (bubbling-router))
             parent (add-fork bus (fn [e] (async/put! os (str "[parent] " e))) (add-info " (pass parent)"))
             child (add-fork parent (fn [e] (async/put! os (str "[child] " e))) (add-info " (pass child)"))
             grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))
-            top (add-leg grandchild)]
+            _ (add-leg grandchild)]
         (trigger grandchild "event")
         (is (matches? ["[child] event (pass grandchild)"
                        "[parent] event (pass grandchild) (pass child)"]
                       (take-all! os)))))
 
-    (testing "upstream forks"
+    (testing "trickling bus forks"
       (let [os (async/chan 1024)
-            bottom (event-bus (upstream-router))
-            parent (add-fork bottom (fn [e] (async/put! os (str "[parent] " e))) (add-info " (pass parent)"))
+            top (event-bus (trickling-router))
+            parent (add-fork top (fn [e] (async/put! os (str "[parent] " e))) (add-info " (pass parent)"))
             child (add-fork parent (fn [e] (async/put! os (str "[child] " e))) (add-info " (pass child)"))
-            grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
-        (trigger bottom "event")
+            _ (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
+        (trigger top "event")
         (is (matches? ["[grandchild] event (pass parent) (pass child)"
                        "[child] event (pass parent)"
                        "[parent] event"]
                       (take-all! os)))))
 
-    (testing "downstream legs"
+    (testing "bubbling bus legs"
       (let [os (async/chan 1024)
-            bottom (event-bus (downstream-router))
-            parent (add-fork bottom (fn [e] (async/put! os (str "[parent] " e))) (add-info " (pass parent)"))
+            top (event-bus (bubbling-router))
+            parent (add-fork top (fn [e] (async/put! os (str "[parent] " e))) (add-info " (pass parent)"))
             child (add-leg parent (add-info " (pass child)"))
             grandchild (add-leg child (add-info " (pass grandchild)"))]
         (trigger grandchild "event")
         (is (matches? ["[parent] event (pass grandchild) (pass child)"]
                       (take-all! os)))))
 
-    (testing "upstream legs"
+    (testing "trickling bus legs"
       (let [os (async/chan 1024)
-            bottom (event-bus (upstream-router))
-            parent (add-leg bottom (add-info " (pass parent)"))
+            top (event-bus (trickling-router))
+            parent (add-leg top (add-info " (pass parent)"))
             child (add-leg parent (add-info " (pass child)"))
-            grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
-        (trigger bottom "event")
+            _ (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
+        (trigger top "event")
         (is (matches? ["[grandchild] event (pass parent) (pass child)"]
                       (take-all! os)))))))
 
@@ -222,10 +222,10 @@
                                      (fn [buf-size & args]
                                        (swap! buf-sizes conj buf-size)))]
         (with-options {:buf-or-n 666}
-                      (let [bus (event-bus (downstream-router))
-                            parent (add-fork bus (fn [_] ()))
-                            child (add-leg parent)]
-                        (is (= [666 1] (distinct @buf-sizes))))))))) ; core.async creates chans of size 1 internally
+                      (-> (event-bus (bubbling-router))
+                          (add-fork (fn [_] ()))
+                          (add-leg))
+                      (is (= [666 1] (distinct @buf-sizes)))))))) ; core.async creates chans of size 1 internally
 
 
 ; TODO: Change the orientation and update documentation.

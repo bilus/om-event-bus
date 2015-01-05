@@ -33,7 +33,7 @@
 
 ;; Here are the configuration options you can use along with their default values:
 ;;
-;; * `:xform` - this optional xform will be applied to all events sent downstream, e.g.
+;; * `:xform` - this optional xform will be applied to all passing through the component, e.g.
 ;; <pre><code> (map (fn [event]
 ;;        (merge event {:extra-info "abc"})))
 ;; </pre></code>
@@ -56,8 +56,8 @@
   ([f value options]
     (root<> f value options nil))
   ([f value options out-event-ch]
-    (root* f value options out-event-ch {:downstream (impl/event-bus (impl/downstream-router))
-                                         :upstream (impl/event-bus (impl/upstream-router))})))
+    (root* f value options out-event-ch {:bubbling (impl/event-bus (impl/bubbling-router))
+                                         :trickling (impl/event-bus (impl/trickling-router))})))
 
 
 (defn root>
@@ -69,35 +69,39 @@
   ([f value options]
     (root> f value options nil))
   ([f value options out-event-ch]
-    (root* f value options out-event-ch {:downstream (impl/event-bus (impl/downstream-router))})))
+    (root* f value options out-event-ch {:bubbling (impl/event-bus (impl/bubbling-router))})))
 
 (defn root<
   "Use `root>` instead of om.core/root to add support for sending events from parent components to child components only."
   ([f value options]
-    (root* f value options nil {:upstream (impl/event-bus (impl/upstream-router))})))
+    (root* f value options nil {:trickling (impl/event-bus (impl/trickling-router))})))
 
 ; =============================================================================
 ;; ### Triggering events.
 
-(defn trigger
-  "This function sends an event from the component down through its parent components.
+(defn bubble
+  "This function sends an event from the component up through its parent components.
 
   Note that `event` can be any data structure, there are no restrictions in this respect though for future compatibility,
   a map is recommended."
   [owner event]
-  (let [event-bus (:downstream (om/get-state owner ::event-buses))]
+  (let [event-bus (:bubbling (om/get-state owner ::event-buses))]
     (impl/trigger event-bus event))
   nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
         ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
         ; as appropriate."
 
-(defn bubble
+(defn trickle
   [owner event]
-  (let [event-bus (:upstream (om/get-state owner ::event-buses))]
+  (let [event-bus (:trickling (om/get-state owner ::event-buses))]
     (impl/trigger event-bus event))
   nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
         ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
         ; as appropriate."
+
+(defn trigger
+  [owner event]
+  (bubble owner event))
 
 ;; This is everything you should need to use the library but you are welcome to the internals as well. :)
 
@@ -134,9 +138,9 @@
                                          (binding [*parent* this]
                                            (super)))})]
     (when out-event-ch
-      (if-let [downstream-bus (:downstream event-buses)]
-        (impl/tap downstream-bus out-event-ch)
-        (throw (js/Error. "Downstream event bus not available. Make sure to use root> or root<>."))))
+      (if-let [bubbling-bus (:bubbling event-buses)]
+        (impl/tap bubbling-bus out-event-ch)
+        (throw (js/Error. "Bubbling event bus not available. Make sure to use root> or root<>."))))
     (om/root f value
              (merge options {:instrument (fn [f x m]
                                            (let [parent-buses (or

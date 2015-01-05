@@ -33,7 +33,7 @@
         (render [_]
                 (apply dom/div nil [
                                     (dom/span nil (str "Parent " (om/id owner)))
-                                    (dom/button #js {:onClick #(event-bus/bubble owner {:event :disable})} "Disable children")
+                                    (dom/button #js {:onClick #(event-bus/trickle owner {:event :disable})} "Disable children")
                                     (om/build child-view app)
                                     (om/build child-view app)]))))
 

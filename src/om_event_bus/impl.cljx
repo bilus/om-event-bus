@@ -5,7 +5,8 @@
   (:require [cljs.core.async :as async])
   #+cljs
   (:require-macros [cljs.core.async.macros :as async]
-                   [om-event-bus.impl :refer [options]]))
+                   [om-event-bus.impl :refer [options]])
+  )
 
 (def ^:dynamic *options* {:buf-or-n 1})
 
@@ -31,14 +32,14 @@
   (shutdown [this]))
 
 (defprotocol IEventRouter
-  (leg [_ down mid-ch up])
-  (fork [_ down up ch]))
+  (leg [_ parent mid-ch child])
+  (fork [_ parent child ch]))
 
-(declare downstream-router extend-event-bus event-bus* dbg-handle-events! handle-events! maybe-apply-xform)
+(declare bubbling-router extend-event-bus event-bus* dbg-handle-events! handle-events! maybe-apply-xform)
 
 (defn event-bus
   ([]
-    (event-bus (downstream-router)))
+    (event-bus (bubbling-router)))
   ([router]
     (event-bus* router (async/mult (async/chan (:buf-or-n (options)))) true)))
 
@@ -47,8 +48,8 @@
   (event-bus* router mult false))
 
 (defn- event-bus*
-  [router down-mult close]
-  (let [mult down-mult
+  [router parent-mult close]
+  (let [mult parent-mult
         bus (reify
               IEventBus
               (tap [_ ch]
@@ -74,59 +75,59 @@
     bus))
 
 (defn- extend-event-bus
-  ([down-bus router handler]
-    (extend-event-bus down-bus router handler nil))
-  ([down-bus router handler xform]
+  ([parent-bus router handler]
+    (extend-event-bus parent-bus router handler nil))
+  ([parent-bus router handler xform]
     (let [event-feed (when handler (async/chan (:buf-or-n (options))))
-          up-mult (async/mult (async/chan (:buf-or-n (options))))
+          child-mult (async/mult (async/chan (:buf-or-n (options))))
           mid-ch (apply async/chan (:buf-or-n (options)) (if xform [xform] []))
-          up-bus (reify
-                   IEventBus
-                   (tap [_ ch]
-                     (async/tap up-mult ch))
-                   (sink [_ mid-ch bus]
-                     (tap bus mid-ch)
-                     (async/pipe mid-ch (async/muxch* up-mult)))
-                   (add-fork [this handler]
-                     (extend-event-bus this router handler))
-                   (add-fork [this handler xform]
-                     (extend-event-bus this router handler xform))
-                   (add-leg [_]
-                     (pass-event-bus router up-mult))
-                   (add-leg [this xform]
-                     (extend-event-bus this router nil xform))
-                   (shutdown [_]
-                     (async/untap-all up-mult)
-                     (async/close! (async/muxch* up-mult))
-                     (when event-feed (async/close! event-feed))
-                     (async/close! mid-ch))
-                   ITriggerEvent
-                   (trigger [_ event]
-                     (async/put! mid-ch event)))]
-      (leg router down-bus mid-ch up-bus)
+          child-bus (reify
+                       IEventBus
+                       (tap [_ ch]
+                         (async/tap child-mult ch))
+                       (sink [_ mid-ch bus]
+                         (tap bus mid-ch)
+                         (async/pipe mid-ch (async/muxch* child-mult)))
+                       (add-fork [this handler]
+                         (extend-event-bus this router handler))
+                       (add-fork [this handler xform]
+                         (extend-event-bus this router handler xform))
+                       (add-leg [_]
+                         (pass-event-bus router child-mult))
+                       (add-leg [this xform]
+                         (extend-event-bus this router nil xform))
+                       (shutdown [_]
+                         (async/untap-all child-mult)
+                         (async/close! (async/muxch* child-mult))
+                         (when event-feed (async/close! event-feed))
+                         (async/close! mid-ch))
+                       ITriggerEvent
+                       (trigger [_ event]
+                         (async/put! mid-ch event)))]
+      (leg router parent-bus mid-ch child-bus)
       (when event-feed
-        (fork router down-bus up-bus event-feed)
-        (handle-events! event-feed handler))
-        (dbg-handle-events! event-feed handler))
-      up-bus)))
+        (fork router parent-bus child-bus event-feed)
+        (handle-events! event-feed handler)
+        #_(dbg-handle-events! event-feed handler))
+      child-bus)))
 
-(defn upstream-router
+(defn trickling-router
   []
   (reify
     IEventRouter
-    (leg [_ down mid-ch up]
-      (sink up mid-ch down))
-    (fork [_ down _ ch]
-      (tap down ch))))
+    (leg [_ parent mid-ch child]
+      (sink child mid-ch parent))
+    (fork [_ parent _ ch]
+      (tap parent ch))))
 
-(defn downstream-router
+(defn bubbling-router
   []
   (reify
     IEventRouter
-    (leg [_ down mid-ch up]
-      (sink down mid-ch up))
-    (fork [_ _ up ch]
-      (tap up ch))))
+    (leg [_ parent mid-ch child]
+      (sink parent mid-ch child))
+    (fork [_ _ child ch]
+      (tap child ch))))
 
 (defn- handle-events!
   [ch f]
