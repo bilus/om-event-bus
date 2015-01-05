@@ -9,14 +9,17 @@
                            [om "0.8.0-beta5" :scope "provided"]
                            #_[org.clojure/tools.trace "0.7.8" :scope "provided"]]
 
-            :source-paths ["src/clj" "target/generated/clj"]
+            :jar-exclusions [#"\.cljx|\.swp|\.swo|\.DS_Store"]
+            :auto-clean false
+
+            :source-paths ["src/cljx"]
 
             :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
                       [lein-marginalia "0.8.0"]
                       [quickie "0.3.6"]
                       [com.keminglabs/cljx "0.5.0"]]
 
-            :prep-tasks [["cljx" "once"]]
+            ;:prep-tasks [["cljx" "once"]]
 
             :clean-targets ["examples/simple/main.js"
                             "examples/simple/out"
@@ -34,38 +37,38 @@
                       "build-auto" ["do" ["clean"] ["cljx" "once"] ["cljsbuild" "auto"]]}
 
             :profiles {:clj {:dependencies [[pjstadig/humane-test-output "0.6.0"]]
-                             :test-paths ["test/clj" "target/generated/test/clj"]
+                             :test-paths ["test"]
                              :injections [(require 'pjstadig.humane-test-output)
                                           (pjstadig.humane-test-output/activate!)]}}
 
             :cljx {:builds [{:source-paths ["src/cljx"]
-                             :output-path "target/generated/clj"
+                             :output-path "target/classes"
                              :rules :clj}
 
                             {:source-paths ["src/cljx"]
-                             :output-path "target/generated/cljs"
+                             :output-path "target/classes"
                              :rules :cljs}]}
 
             :cljsbuild {:builds {:simple
-                                 {:source-paths ["examples/simple/src" "src/cljs" "target/generated/cljs"]
+                                 {:source-paths ["examples/simple/src" "src/cljs" "target/classes"]
                                   :compiler     {:output-to     "examples/simple/main.js"
                                                  :output-dir    "examples/simple/out"
                                                  :source-map    true
                                                  :optimizations :none}}
                                  :xform
-                                 {:source-paths ["src" "examples/xform/src" "src/cljs" "target/generated/cljs"]
+                                 {:source-paths ["src" "examples/xform/src" "src/cljs" "target/classes"]
                                   :compiler     {:output-to     "examples/xform/main.js"
                                                  :output-dir    "examples/xform/out"
                                                  :source-map    true
                                                  :optimizations :none}}
                                  :go_loop
-                                 {:source-paths ["src" "examples/go_loop/src" "src/cljs" "target/generated/cljs"]
+                                 {:source-paths ["src" "examples/go_loop/src" "src/cljs" "target/classes"]
                                   :compiler     {:output-to     "examples/go_loop/main.js"
                                                  :output-dir    "examples/go_loop/out"
                                                  :source-map    true
                                                  :optimizations :none}}
                                  :nested
-                                 {:source-paths ["src" "examples/nested/src" "src/cljs" "target/generated/cljs"]
+                                 {:source-paths ["src" "examples/nested/src" "src/cljs" "target/classes"]
                                   :compiler     {:output-to     "examples/nested/main.js"
                                                  :output-dir    "examples/nested/out"
                                                  :source-map    true
