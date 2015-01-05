@@ -3,9 +3,6 @@
   (:require [clojure.core.async :as async])
   #+cljs
   (:require [cljs.core.async :as async])
-  #+cljs
-  (:require-macros [cljs.core.async.macros :as async]
-    [om-event-bus.impl :refer [options]]))
 
 (def ^:dynamic *options* {:buf-or-n 1})
 
@@ -34,19 +31,19 @@
   (leg [_ down mid-ch up])
   (fork [_ down up ch]))
 
-(declare downstream-router event-bus-leg extend-event-bus -build-event-bus handle-events! maybe-apply-xform)
+(declare downstream-router extend-event-bus event-bus* dbg-handle-events! handle-events! maybe-apply-xform)
 
 (defn event-bus
   ([]
     (event-bus (downstream-router)))
   ([router]
-    (-build-event-bus router (async/mult (async/chan (:buf-or-n (options)))) true)))
+    (event-bus* router (async/mult (async/chan (:buf-or-n (options)))) true)))
 
-(defn pass-event-bus
+(defn- pass-event-bus
   [router mult]
-  (-build-event-bus router mult false))
+  (event-bus* router mult false))
 
-(defn -build-event-bus
+(defn- event-bus*
   [router down-mult close]
   (let [mult down-mult
         bus (reify
@@ -73,7 +70,7 @@
                 (async/put! (async/muxch* mult) event)))]
     bus))
 
-(defn extend-event-bus
+(defn- extend-event-bus
   ([down-bus router handler]
     (extend-event-bus down-bus router handler nil))
   ([down-bus router handler xform]
@@ -106,7 +103,7 @@
       (leg router down-bus mid-ch up-bus)
       (when event-feed
         (fork router down-bus up-bus event-feed)
-        (handle-events! event-feed handler))
+        (dbg-handle-events! event-feed handler))
       up-bus)))
 
 (defn upstream-router
@@ -127,10 +124,23 @@
     (fork [_ _ up ch]
       (tap up ch))))
 
-(defn handle-events!
+(defn- handle-events!
   [ch f]
   (async/go-loop []
     (let [event (async/<! ch)]
       (when event
         (f event)
         (recur)))))
+
+(defn- dbg-handle-events!
+  [ch f]
+  (async/go-loop []
+    (let [t (async/timeout 5000)
+          [event ch] (async/alts! [ch t])]
+      (if (= ch t)
+        (do (f {:event "still running"})
+            (recur))
+        (when event
+          (f event)
+          (recur))))))
+
