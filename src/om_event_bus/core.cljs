@@ -185,6 +185,6 @@
    It simply calls `shutdown` on the event bus set up in `init-event-bus!` above.
    This terminates the go loop handling events."
   [this]
-  (doseq [[bus _] (om/get-state this ::event-buses)]
+  (doseq [[_ bus] (om/get-state this ::event-buses)]
     (impl/shutdown bus))
   (om/set-state! this ::event-buses nil))                  ; TODO: Set each to nil-event-bus reporting meaningful errors.
