@@ -106,6 +106,7 @@
       (leg router down-bus mid-ch up-bus)
       (when event-feed
         (fork router down-bus up-bus event-feed)
+        (handle-events! event-feed handler))
         (dbg-handle-events! event-feed handler))
       up-bus)))
 
