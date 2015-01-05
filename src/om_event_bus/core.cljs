@@ -16,7 +16,7 @@
   (:require-macros [cljs.core.async.macros :as async]
                    [om-event-bus.impl :as impl]))
 
-(declare init-event-bus! shutdown-event-bus! trace)
+(declare init-event-bus! shutdown-event-bus! trace root*)
 
 ; =============================================================================
 ;; ### Protocols
@@ -47,79 +47,34 @@
 
 (def ^:dynamic ^:private *parent* nil)
 
-(defn root>
-  "Use `root>` instead of om.core/root to add support for event bus functionality to all components.
+(defn root<>
+  "Use `root<>` instead of om.core/root to add support for sending events to parent components and to child components.
 
   The arity 4 version lets you specify a channel if you also want to handle events outside of component hierarchy.
 
-  **IMPORTANT:** If you pass a channel to receive events through, you **MUST** consume events.
-
-  Here's what the `root>` function does:
-
-  1. It intercepts calls to build (via `:instrument`) to pass on event buses from parent components to their
-  children (via local state).
-
-  2. It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
-  and tear down the event bus for a component and to bind `*parent*` to be used in the `:instrument` function.
-
-  3. It passes the custom descriptor to `om.core/build*`."
-  ([f value options]
-    (root> f value options nil))
-  ([f value options out-event-ch]
-    (let [event-bus (impl/event-bus (impl/downstream-router))
-          descriptor (d/make-descriptor {:componentWillMount
-                                         (fn [this super]
-                                           (init-event-bus! this)
-                                           (super))
-                                         :componentWillUnmount
-                                         (fn [this super]
-                                           (shutdown-event-bus! this)
-                                           (super))
-                                         :render
-                                         (fn [this super]
-                                           (binding [*parent* this]
-                                             (super)))})]
-      (when out-event-ch
-        (impl/tap event-bus out-event-ch))
-      (om/root f value
-              (merge options {:instrument (fn [f x m]
-                                            (let [parent-bus (or
-                                                               (and *parent* (om/get-state *parent* ::event-bus))
-                                                               event-bus)]
-                                              (om/build* f x (-> m
-                                                                 (update-in [:init-state] merge {::event-bus parent-bus})
-                                                                 (merge {:descriptor descriptor})))))})))))
-
-(defn root<>
+  **IMPORTANT:** If you pass a channel to receive events through, you **MUST** consume events."
   ([f value options]
     (root<> f value options nil))
   ([f value options out-event-ch]
-    (let [event-buses {:downstream (impl/event-bus (impl/downstream-router))
-                       :upstream (impl/event-bus (impl/upstream-router))}
-          descriptor (d/make-descriptor {:componentWillMount
-                                         (fn [this super]
-                                           (init-event-bus! this)
-                                           (super))
-                                         :componentWillUnmount
-                                         (fn [this super]
-                                           (shutdown-event-bus! this)
-                                           (super))
-                                         :render
-                                         (fn [this super]
-                                           (binding [*parent* this]
-                                             (super)))})]
-      (when out-event-ch
-        (if-let [downstream-bus (:downstream event-buses)]
-          (impl/tap downstream-bus out-event-ch)
-          (throw (js/Error. "Downstream event bus not available. Make sure to use root> or root<>."))))
-      (om/root f value
-               (merge options {:instrument (fn [f x m]
-                                             (let [parent-buses (or
-                                                                (and *parent* (om/get-state *parent* ::event-buses))
-                                                                event-buses)]
-                                               (om/build* f x (-> m
-                                                                  (update-in [:init-state] merge {::event-buses parent-buses})
-                                                                  (merge {:descriptor descriptor})))))})))))
+    (root* f value options out-event-ch {:downstream (impl/event-bus (impl/downstream-router))
+                                         :upstream (impl/event-bus (impl/upstream-router))})))
+
+
+(defn root>
+  "Use `root>` instead of om.core/root to add support for sending events from child components to parent components only.
+
+  The arity 4 version lets you specify a channel if you also want to handle events outside of component hierarchy.
+
+  **IMPORTANT:** If you pass a channel to receive events through, you **MUST** consume events."
+  ([f value options]
+    (root> f value options nil))
+  ([f value options out-event-ch]
+    (root* f value options out-event-ch {:downstream (impl/event-bus (impl/downstream-router))})))
+
+(defn root<
+  "Use `root>` instead of om.core/root to add support for sending events from parent components to child components only."
+  ([f value options]
+    (root* f value options nil {:upstream (impl/event-bus (impl/upstream-router))})))
 
 ; =============================================================================
 ;; ### Triggering events.
@@ -153,6 +108,44 @@
 ; =============================================================================
 ;; # Internals
 
+;; ### Implementation of om/root replacements.
+
+(defn- root*
+  "Here's what the `root*` function does:
+
+  1. It intercepts calls to build (via `:instrument`) to pass on event buses from parent components to their
+  children (via local state).
+
+  2. It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
+  and tear down the event bus for a component and to bind `*parent*` to be used in the `:instrument` function.
+
+  3. It passes the custom descriptor to `om.core/build*`."
+  [f value options out-event-ch event-buses]
+  (let [descriptor (d/make-descriptor {:componentWillMount
+                                       (fn [this super]
+                                         (init-event-bus! this)
+                                         (super))
+                                       :componentWillUnmount
+                                       (fn [this super]
+                                         (shutdown-event-bus! this)
+                                         (super))
+                                       :render
+                                       (fn [this super]
+                                         (binding [*parent* this]
+                                           (super)))})]
+    (when out-event-ch
+      (if-let [downstream-bus (:downstream event-buses)]
+        (impl/tap downstream-bus out-event-ch)
+        (throw (js/Error. "Downstream event bus not available. Make sure to use root> or root<>."))))
+    (om/root f value
+             (merge options {:instrument (fn [f x m]
+                                           (let [parent-buses (or
+                                                                (and *parent* (om/get-state *parent* ::event-buses))
+                                                                event-buses)]
+                                             (om/build* f x (-> m
+                                                                (update-in [:init-state] merge {::event-buses parent-buses})
+                                                                (merge {:descriptor descriptor})))))}))))
+
 ;; ### Event bus setup
 
 (defn- init-event-bus!
@@ -184,8 +177,7 @@
                                             (for [[k bus] (om/get-state this ::event-buses)]
                                               [k (if handler
                                                    (impl/add-fork bus handler xform)
-                                                   (impl/add-leg bus xform))]))))
-    (println om/get-state this ::event-buses)))
+                                                   (impl/add-leg bus xform))]))))))
 
 
 (defn- shutdown-event-bus!

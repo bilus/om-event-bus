@@ -227,19 +227,21 @@
                             child (add-leg parent)]
                         (is (= [666 1] (distinct @buf-sizes))))))))) ; core.async creates chans of size 1 internally
 
-; TODO: Use upstream in core.
-; TODO: Add interfaces: IGotUpstreamEvent IGotDownstreamEvent. Make it work.
+
+; TODO: Use one go loop per component.
+; TODO: Change the orientation and update documentation.
+; TODO: Test killing.
+; TODO: If one out of two om roots is killed go-loop collecting events still works. Write example two_roots.
+
+; TODO: Add interfaces: IGotBubblingEvent IGotTricklingEvent. Make it work.
+
 ; TODO: Update documentation in core.
 ; TODO: Write documentation for impl.
-; TODO: Write an example for sending messages upstream.
+
 ; TODO: Write an example about broadcasting to all components within a tree.
 ; TODO: Update idealist (coordination between sortables).
-; TODO: Testing killing.
-; TODO: Make sure that for two om roots, after one root is killed, the top-level go-loop
 
 ; TODO: Build marginalia docs.
-; TODO: Build examples and copy them to gh-pages branch.
+; TODO: Build examples and copy them to gh-pages branch. Link to new examples from Readme.
 
 
-;       collecting events from event bus common to both roots, keeps receiving events from
-;       the remaining root.
