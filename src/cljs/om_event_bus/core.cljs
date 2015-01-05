@@ -37,6 +37,14 @@
   Use it in your component to override event bus options. Return an option hash to be merged into `default-config`."
   (init-event-bus [_]))
 
+(def default-protocols
+  {::all #(when (satisfies? IGotEvent %)
+           got-event)
+   ::bubbling #(when (satisfies? IGotBubblingEvent %)
+                got-bubbling-event)
+   ::trickling #(when (satisfies? IGotTricklingEvent %)
+                got-trickling-event)})
+
 ;; Here are the configuration options you can use along with their default values:
 ;;
 ;; * `:xform` - this optional xform will be applied to all passing through the component, e.g.
@@ -65,7 +73,8 @@
            options
            out-event-ch
            {::bubbling (impl/event-bus (impl/bubbling-router))
-            ::trickling (impl/event-bus (impl/trickling-router))})))
+            ::trickling (impl/event-bus (impl/trickling-router))}
+           default-protocols)))
 
 (defn root>
   "Use `root>` instead of om.core/root to add support for sending events from child components to parent components only.
@@ -80,7 +89,8 @@
            value
            options
            out-event-ch
-           {::bubbling (impl/event-bus (impl/bubbling-router))})))
+           {::bubbling (impl/event-bus (impl/bubbling-router))}
+           default-protocols)))
 
 (defn root<
   "Use `root>` instead of om.core/root to add support for sending events from parent components to child components only."
@@ -89,7 +99,8 @@
            value
            options
            nil
-           {::trickling (impl/event-bus (impl/trickling-router))})))
+           {::trickling (impl/event-bus (impl/trickling-router))}
+           default-protocols)))
 
 ; =============================================================================
 ;; ### Triggering events.
@@ -133,10 +144,10 @@
   and tear down the event bus for a component and to bind `*parent*` to be used in the `:instrument` function.
 
   3. It passes the custom descriptor to `om.core/build*`."
-  [f value options out-event-ch event-buses]
+  [f value options out-event-ch event-buses protocols]
   (let [descriptor (d/make-descriptor {:componentWillMount
                                        (fn [this super]
-                                         (init-event-bus! this)
+                                         (init-event-bus! this protocols)
                                          (super))
                                        :componentWillUnmount
                                        (fn [this super]
@@ -186,18 +197,18 @@
 
    This mult/tap magic happens only if the component reifies the `IGotEvent` protocol and, to some
    extend, for `IInitEventBus` protocol as well. For components that don't care about events, overhead is minimal."
-  [this]
+  [this protocols]
   (let [c (om/children this)
         {:keys [xform buf-or-n]} (merge default-config
                                         (when (satisfies? IInitEventBus c)
                                           (init-event-bus c)))
-        catch-all-handler (find-handler c ::all)]
+        catch-all-handler (find-handler c ::all protocols)]
     (impl/with-options {:buf-or-n buf-or-n}
                        (om/set-state! this
                                       ::event-buses
                                       (into {}
                                             (for [[k bus] (om/get-state this ::event-buses)]
-                                              (let [handler (compose-handlers catch-all-handler (find-handler c k))]
+                                              (let [handler (compose-handlers catch-all-handler (find-handler c k protocols))]
                                                 [k (if handler
                                                      (impl/add-fork bus handler xform)
                                                      (impl/add-leg bus xform))])))))))
@@ -210,17 +221,9 @@
         (f event)))))
 
 (defn- find-handler
-  [component bus-key]
-  ; Protocols are hard-coded because satisfies? in ClojureScript is a macro and requires a protocol name as an argument
-  ; and passing a var doesn't work.
-  (case bus-key
-    ::all  (when (satisfies? IGotEvent component)
-             (partial got-event component))
-    ::bubbling (when (satisfies? IGotBubblingEvent component)
-                 (partial got-bubbling-event component))
-    ::trickling (when (satisfies? IGotTricklingEvent component)
-                  (partial got-trickling-event component))
-    nil))
+  [component bus-key protocols]
+  (when-let [handler-fn ((bus-key protocols) component)]
+    (partial handler-fn component)))
 
 (defn- shutdown-event-bus!
   "This function mainly shuts down event bus for this component.
