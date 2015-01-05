@@ -3,6 +3,9 @@
   (:require [clojure.core.async :as async])
   #+cljs
   (:require [cljs.core.async :as async])
+  #+cljs
+  (:require-macros [cljs.core.async.macros :as async]
+                   [om-event-bus.impl :refer [options]]))
 
 (def ^:dynamic *options* {:buf-or-n 1})
 
@@ -143,4 +146,3 @@
         (when event
           (f event)
           (recur))))))
-
