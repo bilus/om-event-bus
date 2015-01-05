@@ -228,7 +228,6 @@
                         (is (= [666 1] (distinct @buf-sizes))))))))) ; core.async creates chans of size 1 internally
 
 
-; TODO: Test killing.
 ; TODO: Change the orientation and update documentation.
 ; TODO: If one out of two om roots is killed go-loop collecting events still works. Write example two_roots.
 
