@@ -26,6 +26,12 @@
   Use it in your components if you're interested in handling events from children."
   (got-event [_ event]))
 
+(defprotocol IGotBubblingEvent
+  (got-bubbling-event [_ event]))
+
+(defprotocol IGotTricklingEvent
+  (got-trickling-event [_ event]))
+
 (defprotocol IInitEventBus
   "* (Advanced) Configuration protocol.
   Use it in your component to override event bus options. Return an option hash to be merged into `default-config`."
@@ -54,8 +60,12 @@
 
   **IMPORTANT:** If you pass a channel to receive events through, you **MUST** consume events."
   ([f value options & [out-event-ch]]
-    (root* f value options out-event-ch {::bubbling (impl/event-bus (impl/bubbling-router))
-                                         ::trickling (impl/event-bus (impl/trickling-router))})))
+    (root* f
+           value
+           options
+           out-event-ch
+           {::bubbling (impl/event-bus (impl/bubbling-router))
+            ::trickling (impl/event-bus (impl/trickling-router))})))
 
 (defn root>
   "Use `root>` instead of om.core/root to add support for sending events from child components to parent components only.
@@ -66,12 +76,20 @@
   ([f value options]
     (root> f value options nil))
   ([f value options out-event-ch]
-    (root* f value options out-event-ch {::bubbling (impl/event-bus (impl/bubbling-router))})))
+    (root* f
+           value
+           options
+           out-event-ch
+           {::bubbling (impl/event-bus (impl/bubbling-router))})))
 
 (defn root<
   "Use `root>` instead of om.core/root to add support for sending events from parent components to child components only."
   ([f value options]
-    (root* f value options nil {::trickling (impl/event-bus (impl/trickling-router))})))
+    (root* f
+           value
+           options
+           nil
+           {::trickling (impl/event-bus (impl/trickling-router))})))
 
 ; =============================================================================
 ;; ### Triggering events.
@@ -153,6 +171,8 @@
 
 ;; ### Event bus setup
 
+(declare find-handler compose-handlers)
+
 (defn- init-event-bus!
   "This function adds support for triggering events and, if the component reified IGotEvent, support for handling events
    from child components.
@@ -162,28 +182,45 @@
    What it does is it takes the event bus from its parent component (`down`) and extends it, either by forking it
    to handle events (if the component reifies `IGotEvent`) or by creating a 'leg' of the bus with minimal overhead.
 
-   It sets local state:
-   ::event-bus   -  the event bus segment.
+   It sets local state - ::event-buses.
 
-   Please note that this mult/tap magic happens only if the component reifies the `IGotEvent` protocol and, to some
+   This mult/tap magic happens only if the component reifies the `IGotEvent` protocol and, to some
    extend, for `IInitEventBus` protocol as well. For components that don't care about events, overhead is minimal."
   [this]
   (let [c (om/children this)
         {:keys [xform buf-or-n]} (merge default-config
                                         (when (satisfies? IInitEventBus c)
                                           (init-event-bus c)))
-        handler (when (satisfies? IGotEvent c)
-                  (partial got-event c))]
-
+        catch-all-handler (find-handler c ::all)]
     (impl/with-options {:buf-or-n buf-or-n}
                        (om/set-state! this
                                       ::event-buses
                                       (into {}
                                             (for [[k bus] (om/get-state this ::event-buses)]
-                                              [k (if handler
-                                                   (impl/add-fork bus handler xform)
-                                                   (impl/add-leg bus xform))]))))))
+                                              (let [handler (compose-handlers catch-all-handler (find-handler c k))]
+                                                [k (if handler
+                                                     (impl/add-fork bus handler xform)
+                                                     (impl/add-leg bus xform))])))))))
 
+(defn- compose-handlers
+  [& handlers]
+  (when-let [funs (not-empty (remove nil? handlers))]
+    (fn [event]
+      (doseq [f funs]
+        (f event)))))
+
+(defn- find-handler
+  [component bus-key]
+  ; Protocols are hard-coded because satisfies? in ClojureScript is a macro and requires a protocol name as an argument
+  ; and passing a var doesn't work.
+  (case bus-key
+    ::all  (when (satisfies? IGotEvent component)
+             (partial got-event component))
+    ::bubbling (when (satisfies? IGotBubblingEvent component)
+                 (partial got-bubbling-event component))
+    ::trickling (when (satisfies? IGotTricklingEvent component)
+                  (partial got-trickling-event component))
+    nil))
 
 (defn- shutdown-event-bus!
   "This function mainly shuts down event bus for this component.

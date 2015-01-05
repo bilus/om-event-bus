@@ -26,3 +26,5 @@ examples/nested/out/*
 examples/nested/main.js
 examples/disable/out/*
 examples/disable/main.js
+examples/protocols/out/*
+examples/protocols/main.js

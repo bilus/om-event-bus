@@ -27,6 +27,10 @@
                             "examples/go_loop/out"
                             "examples/nested/main.js"
                             "examples/nested/out"
+                            "examples/disable/main.js"
+                            "examples/disable/out"
+                            "examples/protocols/main.js"
+                            "examples/protocols/out"
                             "target/"]
 
             :aliases {"quickie" ["with-profile" "clj" "quickie"]
@@ -75,6 +79,12 @@
                                  {:source-paths ["examples/disable/src" "src/cljs" "target/classes/"]
                                   :compiler     {:output-to     "examples/disable/main.js"
                                                  :output-dir    "examples/disable/out"
+                                                 :source-map    true
+                                                 :optimizations :none}}
+                                 :protocols
+                                 {:source-paths ["examples/protocols/src" "src/cljs" "target/classes/"]
+                                  :compiler     {:output-to     "examples/protocols/main.js"
+                                                 :output-dir    "examples/protocols/out"
                                                  :source-map    true
                                                  :optimizations :none}}}})
 

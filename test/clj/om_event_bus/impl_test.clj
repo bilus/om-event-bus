@@ -214,7 +214,6 @@
         (is (matches? ["[grandchild] event (pass parent) (pass child)"]
                       (take-all! os)))))))
 
-
 (deftest test-with-options
   (testing "buffer size"
     (let [buf-sizes (atom [])]
@@ -228,7 +227,7 @@
                       (is (= [666 1] (distinct @buf-sizes)))))))) ; core.async creates chans of size 1 internally
 
 
-; TODO: Add interfaces: IGotBubblingEvent IGotTricklingEvent. Make it work.
+; TODO: Write an example for IGotBubblingEvent and IGotTricklingEvent.
 
 ; TODO: Update documentation in core.
 ; TODO: Write documentation for impl.
