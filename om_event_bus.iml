@@ -8,6 +8,8 @@
       <sourceFolder url="file://$MODULE_DIR$/dev-resources" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/resources" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/cljs" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/cljx" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/examples/disable" />
       <excludeFolder url="file://$MODULE_DIR$/examples/disable/out" />
