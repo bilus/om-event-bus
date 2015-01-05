@@ -53,12 +53,9 @@
   The arity 4 version lets you specify a channel if you also want to handle events outside of component hierarchy.
 
   **IMPORTANT:** If you pass a channel to receive events through, you **MUST** consume events."
-  ([f value options]
-    (root<> f value options nil))
-  ([f value options out-event-ch]
-    (root* f value options out-event-ch {:bubbling (impl/event-bus (impl/bubbling-router))
-                                         :trickling (impl/event-bus (impl/trickling-router))})))
-
+  ([f value options & [out-event-ch]]
+    (root* f value options out-event-ch {::bubbling (impl/event-bus (impl/bubbling-router))
+                                         ::trickling (impl/event-bus (impl/trickling-router))})))
 
 (defn root>
   "Use `root>` instead of om.core/root to add support for sending events from child components to parent components only.
@@ -69,15 +66,17 @@
   ([f value options]
     (root> f value options nil))
   ([f value options out-event-ch]
-    (root* f value options out-event-ch {:bubbling (impl/event-bus (impl/bubbling-router))})))
+    (root* f value options out-event-ch {::bubbling (impl/event-bus (impl/bubbling-router))})))
 
 (defn root<
   "Use `root>` instead of om.core/root to add support for sending events from parent components to child components only."
   ([f value options]
-    (root* f value options nil {:trickling (impl/event-bus (impl/trickling-router))})))
+    (root* f value options nil {::trickling (impl/event-bus (impl/trickling-router))})))
 
 ; =============================================================================
 ;; ### Triggering events.
+
+(declare trigger*)
 
 (defn bubble
   "This function sends an event from the component up through its parent components.
@@ -85,19 +84,11 @@
   Note that `event` can be any data structure, there are no restrictions in this respect though for future compatibility,
   a map is recommended."
   [owner event]
-  (let [event-bus (:bubbling (om/get-state owner ::event-buses))]
-    (impl/trigger event-bus event))
-  nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
-        ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
-        ; as appropriate."
+  (trigger* owner ::bubbling event))
 
 (defn trickle
   [owner event]
-  (let [event-bus (:trickling (om/get-state owner ::event-buses))]
-    (impl/trigger event-bus event))
-  nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
-        ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
-        ; as appropriate."
+  (trigger* owner ::trickling event))
 
 (defn trigger
   [owner event]
@@ -114,7 +105,7 @@
 
 ;; ### Implementation of om/root replacements.
 
-(defn- root*
+(defn root*
   "Here's what the `root*` function does:
 
   1. It intercepts calls to build (via `:instrument`) to pass on event buses from parent components to their
@@ -138,7 +129,7 @@
                                          (binding [*parent* this]
                                            (super)))})]
     (when out-event-ch
-      (if-let [bubbling-bus (:bubbling event-buses)]
+      (if-let [bubbling-bus (::bubbling event-buses)]
         (impl/tap bubbling-bus out-event-ch)
         (throw (js/Error. "Bubbling event bus not available. Make sure to use root> or root<>."))))
     (om/root f value
@@ -149,6 +140,16 @@
                                              (om/build* f x (-> m
                                                                 (update-in [:init-state] merge {::event-buses parent-buses})
                                                                 (merge {:descriptor descriptor})))))}))))
+
+;; ### Event triggering
+
+(defn trigger*
+  [owner event-bus-key event]
+  (let [event-bus (event-bus-key (om/get-state owner ::event-buses))]
+    (impl/trigger event-bus event))
+  nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
+        ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
+        ; as appropriate."
 
 ;; ### Event bus setup
 
