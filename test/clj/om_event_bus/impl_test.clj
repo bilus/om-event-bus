@@ -227,18 +227,16 @@
                       (is (= [666 1] (distinct @buf-sizes)))))))) ; core.async creates chans of size 1 internally
 
 
-; TODO: Write an example for IGotBubblingEvent and IGotTricklingEvent.
-
-; TODO: Update documentation in core.
-; TODO: Write documentation for impl.
 
 ; TODO: Write an example about broadcasting to all components within a tree.
 ; TODO: Update idealist (coordination between sortables).
 
+; TODO: Update documentation in core.
+; TODO: Write documentation for impl.
 
 ; TODO: Build marginalia docs.
 ; TODO: Build examples and copy them to gh-pages branch. Link to new examples from Readme.
-; TODO: Use one go loop per component.
 
+; TODO: Use one go loop per component. (?)
 ; TODO: If one out of two om roots is killed go-loop collecting events still works. Write example two_roots.
 
