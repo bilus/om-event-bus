@@ -8,6 +8,10 @@
                    [om-event-bus.impl :refer [options]])
   )
 
+;; This namespace contains the actual implementation of event buses based core.async.
+;;
+;; This is a portable .cljx file and can be used in both Clojure and ClojureScript.
+
 (def ^:dynamic *options* {:buf-or-n 1})
 
 (defmacro with-options
@@ -37,6 +41,7 @@
 
 (declare bubbling-router extend-event-bus event-bus* dbg-handle-events! handle-events! maybe-apply-xform)
 
+#+cljs
 (defn event-bus
   ([]
     (event-bus (bubbling-router)))

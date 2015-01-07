@@ -231,8 +231,8 @@
 ; TODO: Write an example about broadcasting to all components within a tree.
 ; TODO: Update idealist (coordination between sortables).
 
-; TODO: Update documentation in core.
 ; TODO: Write documentation for impl.
+; TODO: Update the Readme.
 
 ; TODO: Build marginalia docs.
 ; TODO: Build examples and copy them to gh-pages branch. Link to new examples from Readme.

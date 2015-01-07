@@ -14,7 +14,7 @@ In this approach components nested within each other can send custom events to t
 
 This idea is best expressed as an imaginary bus connecting components.
 
-![High-level overview](https://raw.githubusercontent.com/bilus/om-event-bus/master/docs/event-bus.png)
+![High-level overview](https://raw.githubusercontent.com/bilus/om-event-bus/master/docs/event_bus_2.png)
 
 One important feature is that events flow in only one direction, i.e. from children to their ancestors, never the other
 way. In addition, an event can be handled by any number of component wrapping the source component.

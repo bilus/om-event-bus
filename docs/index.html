@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" content="text/html" http-equiv="Content-Type" /><meta content="Simple parent-&gt;child custom events for Om." name="description" /><style type="text/css">/**
+<html><head><meta charset="utf-8" content="text/html" http-equiv="Content-Type" /><meta content="Simple custom events for Om." name="description" /><style type="text/css">/**
  * SyntaxHighlighter
  * http://alexgorbatchev.com/SyntaxHighlighter
  *
@@ -2865,36 +2865,143 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>om-event-bus -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name"><a href="http://github.com/bilus/om-event-bus">om-event-bus</a></h1><h2 class="project-version">0.1.1-SNAPSHOT</h2><br /><p>Simple parent->child custom events for Om.</p>
-</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.6.0</td></tr><tr><td class="dep-name">org.clojure/clojurescript</td><td class="dotted"><hr /></td><td class="dep-version">0.0-2505</td></tr><tr><td class="dep-name">org.clojure/core.async</td><td class="dotted"><hr /></td><td class="dep-version">0.1.346.0-17112a-alpha</td></tr><tr><td class="dep-name">om</td><td class="dotted"><hr /></td><td class="dep-version">0.8.0-beta5</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#om-event-bus.core">om-event-bus.core</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#om-event-bus.core" name="om-event-bus.core"><h1 class="project-name">om-event-bus.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><h1>Introduction</h1>
+</script><link href="styles.css" rel="stylesheet" tyle="text/css" /><title>om-event-bus -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name"><a href="http://github.com/bilus/om-event-bus">om-event-bus</a></h1><h2 class="project-version">0.2.0-SNAPSHOT</h2><br /><p>Simple custom events for Om.</p>
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.6.0</td></tr><tr><td class="dep-name">org.clojure/clojurescript</td><td class="dotted"><hr /></td><td class="dep-version">0.0-2505</td></tr><tr><td class="dep-name">org.clojure/core.async</td><td class="dotted"><hr /></td><td class="dep-version">0.1.346.0-17112a-alpha</td></tr><tr><td class="dep-name">om</td><td class="dotted"><hr /></td><td class="dep-version">0.8.0-beta5</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#om-event-bus.core">om-event-bus.core</a></li><li><a href="#om-event-bus.descriptor">om-event-bus.descriptor</a></li><li><a href="#om-event-bus.impl">om-event-bus.impl</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#om-event-bus.core" name="om-event-bus.core"><h1 class="project-name">om-event-bus.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><h1>Introduction</h1>
 
-<p>Use this library whenever you need your Om components to communicate with their parent components.</p>
+<p>Use this library whenever you need Om components to send events either down to components nested within them or up to their parents.</p>
 
-<p><img src="event-bus.png" alt="High-level overview" /></p>
+<p>Let's say you have three om components nested inside each other:</p>
 
-<p>There are three key things you need to learn about in order to start using this library in your Om project: protocols,
-core.om/root replacement and the trigger function.</p>
+<p><img src="event_bus_1.png" alt="Three nested components" /></p>
 
-<p>Start by requiring <code>om-event-bus-core</code> in your module's ns declaration.</p>
+<p>When a component triggers an event, it can send it in two possible directions:</p>
+
+<ul>
+<li>it can <strong>bubble</strong> it to its parents all the way to the top, or</li>
+<li>it can <strong>trickle</strong> an event to its children.</li>
+</ul>
+
+<p>In om-event-bus each direction is handled by a separate event bus. Components connect to an event bus to handle events passing through it.</p>
+
+<p><img src="event_bus_2.png" alt="Bubbling vs. trickling" /></p>
 </td><td class="codes"><pre class="brush: clojure">(ns om-event-bus.core
   (:require [om.core :as om :include-macros true]
-            [cljs.core.async :as async])
-  (:require-macros [cljs.core.async.macros :as async]))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(declare make-descriptor init-event-bus! shutdown-event-bus! trace)</pre></td></tr><tr><td class="docs"><h3>Protocols</h3>
-</td><td class="codes"></td></tr><tr><td class="docs"><ul>
-<li>Event handling protocol.
-Use it in your components if you're interested in handling events from children.</li>
-</ul>
+            [cljs.core.async :as async]
+            [om-event-bus.impl :as impl]
+            [om-event-bus.descriptor :as d])
+  (:require-macros [cljs.core.async.macros :as async]
+                   [om-event-bus.impl :as impl]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(declare init-event-bus! shutdown-event-bus! trace root* default-protocols)
+(def ^:dynamic ^:private *parent* nil)</pre></td></tr><tr><td class="docs"><h3>Replacements for om.core/root</h3>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>First, we need a replacement for om.core/root that will inject event buses into every component created by our app.</p>
+
+<p>There are three versions of the replacement. Let's start with one that adds most functionality.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>The <code>root&lt;&gt;</code> function adds support both for bubbling (child to parents) and trickling (parent to children) events.</p>
+
+<blockquote>
+  <p><strong>Note</strong></p>
+  
+  <p>The arity 4 version lets you specify a channel if you also want to handle events outside of component hierarchy.
+  If you pass a channel to receive events through, you <strong>MUST</strong> consume events.</p>
+  
+  <p>See <a href="https://github.com/bilus/om-event-bus/blob/master/examples/go_loop/src/core.cljs">this example</a> (<a href="http://bilus.github.io/om-event-bus/examples/go_loop/index.html">demo</a>).</p>
+</blockquote>
+</td><td class="codes"><pre class="brush: clojure">(defn root&lt;&gt;
+  ([f value options &amp; [out-event-ch]]
+    (root* f
+           value
+           options
+           out-event-ch
+           {::bubbling (impl/event-bus (impl/bubbling-router))
+            ::trickling (impl/event-bus (impl/trickling-router))}
+           default-protocols)))</pre></td></tr><tr><td class="docs"><p>The other two versions each create a single bus for one direction only, either bubbling or trickling.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Use <code>root&gt;</code> instead of om.core/root to add support for sending events from child components to parent components only (bubbling).</p>
+
+<blockquote>
+  <p><strong>Note</strong></p>
+  
+  <p>Similarly too <code>root&lt;&gt;</code>, the arity 4 version lets you specify a channel if you also want to handle events outside of
+  component hierarchy and if you pass the channel you <strong>MUST</strong> consume events.</p>
+</blockquote>
+</td><td class="codes"><pre class="brush: clojure">(defn root&gt;
+  ([f value options]
+    (root&gt; f value options nil))
+  ([f value options out-event-ch]
+    (root* f
+           value
+           options
+           out-event-ch
+           {::bubbling (impl/event-bus (impl/bubbling-router))}
+           default-protocols)))</pre></td></tr><tr><td class="docs"><p>Use <code>root&lt;</code> instead of om.core/root to add support for sending events from parent components to child components only (trickling).</p>
+</td><td class="codes"><pre class="brush: clojure">(defn root&lt;
+  ([f value options]
+    (root* f
+           value
+           options
+           nil
+           {::trickling (impl/event-bus (impl/trickling-router))}
+           default-protocols)))</pre></td></tr><tr><td class="docs"><p>Use these functions anywhere you would normally use om.core/root. Example:</p>
+
+<p><pre><code>(<strong>event-bus/root&lt;></strong>
+             (fn [app owner]
+               (reify om/IRender
+                 (render [_]
+                   (dom/h1 nil (:text app)))))
+             app-state
+             {:target (. js/document (getElementById \"app\"))})</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(declare trigger*)</pre></td></tr><tr><td class="docs"><h3>Triggering events.</h3>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>To trigger an event simply call one of the functions below, passing <code>owner</code> and any data as <code>event</code> (a map is probably
+the best choice but is not required).</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>There are two functions to either bubble or trickle events.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>The <code>bubble</code> function sends an event from <code>owner</code> up to its parents.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn bubble
+  [owner event]
+  (trigger* owner ::bubbling event))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn trickle
+  [owner event]
+  (trigger* owner ::trickling event))</pre></td></tr><tr><td class="docs"><p>Let's also define a function that sends in the default direction (depends on one's taste but I've chosen sending
+from children to parents as the default.)</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>The <code>trigger</code> function simply bubbles an event.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn trigger
+  [owner event]
+  (bubble owner event))</pre></td></tr><tr><td class="docs"><p>Here's an example usage:</p>
+
+<p><pre><code>(defn child-view
+             [app owner]
+             (reify
+               om/IRender
+               (render [_]
+                 (dom/div nil (dom/button
+                                #js {:onClick #(<strong>event-bus/bubble</strong> owner \"Hi there!\")}
+                                \"Click me!\")))))
+</pre></code></p>
+</td><td class="codes"></td></tr><tr><td class="docs"><h3>Handling events.</h3>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Reify <code>IGotEvent</code> in components that are interested in both bubbling and trickling events.</p>
+
+<p>  Example:
+  <pre><code>(defn parent-view
+      [app owner]
+      (reify
+        <strong>event-bus/IGotEvent</strong>
+        (<strong>got-event [_ event]</strong>
+          ... do something about the event ...)
+        om/IRender
+        ...
+  </pre></code></p>
 </td><td class="codes"><pre class="brush: clojure">(defprotocol IGotEvent
-  (got-event [_ event]))</pre></td></tr><tr><td class="docs"><ul>
-<li>(Advanced) Configuration protocol.
-Use it in your component to override event bus options. Return an option hash to be merged into <code>default-config</code>.</li>
-</ul>
+  (got-event [_ event]))</pre></td></tr><tr><td class="docs"><p>The <code>IGotBubblingEvent</code>, when reified in a component, will handle bubbling events.</p>
+</td><td class="codes"><pre class="brush: clojure">(defprotocol IGotBubblingEvent
+  (got-bubbling-event [_ event]))</pre></td></tr><tr><td class="docs"><p>This protocol, <code>IGotTricklingEvent</code> should be reified to handle trickling events.</p>
+</td><td class="codes"><pre class="brush: clojure">(defprotocol IGotTricklingEvent
+  (got-trickling-event [_ event]))</pre></td></tr><tr><td class="docs"><p>There's one more protocol useful when you want to define a function transforming events that pass a particular
+component (via xforms) or to configure the event bus.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Use <code>IInitEventBus</code> to override event bus options. Return an option hash to be merged into <code>default-config</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defprotocol IInitEventBus
   (init-event-bus [_]))</pre></td></tr><tr><td class="docs"><p>Here are the configuration options you can use along with their default values:</p>
 
 <ul>
-<li><code>:xform</code> - this optional xform will be applied to all events sent downstream, e.g.
+<li><code>:xform</code> - this optional xform will be applied to all passing through the component, e.g.
 <pre><code> (map (fn [event]
    (merge event {:extra-info "abc"})))
 </pre></code></li>
@@ -2902,136 +3009,127 @@ Use it in your component to override event bus options. Return an option hash to
 </ul>
 </td><td class="codes"></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(def default-config {:xform    nil
-                     :buf-or-n 1})</pre></td></tr><tr><td class="docs"><h3>Replacement for om.core/root</h3>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def ^:dynamic ^:private *parent* nil)</pre></td></tr><tr><td class="docs"><p>Use <code>root&gt;</code> instead of om.core/root to add support for event bus functionality to all components.</p>
-
-<p>  The arity 4 version lets you specify the channel if you also want to handle events outside of component hierarchy.</p>
-
-<p>  <strong>IMPORTANT:</strong> If you pass your own event bus channel, you <strong>MUST</strong> consume events.</p>
-
-<p>  What the <code>root&gt;</code> function does is in the essence two things:</p>
-
-<ol>
-<li><p>It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
-and tear down the event bus for a component and to bind <code>*parent*</code> to be used in the <code>:instrument</code> function.</p></li>
-<li><p>It intercepts calls to build (via <code>:instrument</code>) to pass on event bus channels from parent components to their
-children (via local state).</p></li>
-</ol>
-</td><td class="codes"><pre class="brush: clojure">(defn root&gt;
-  ([f value options]
-    (let [event-bus (async/chan 1)]
-      (root&gt; f value options event-bus)
-      ;; Consume events to make sure async/mult delivers to all taps.
-      (async/go-loop []
-                     (let [x (&lt;! event-bus)]
-                       (when x (recur))))))
-  ([f value options event-bus]
-    (om/root f value
-             (merge options {:descriptor (make-descriptor {:componentWillMount
-                                                           (fn [this super]
-                                                             (init-event-bus! this)
-                                                             (super))
-                                                           :componentWillUnmount
-                                                           (fn [this super]
-                                                             (shutdown-event-bus! this)
-                                                             (super))
-                                                           :render
-                                                           (fn [this super]
-                                                             (binding [*parent* this]
-                                                               (super)))})
-                             :instrument (fn [f x m]
-                                           (let [parent-bus (or
-                                                              (and *parent* (om/get-state *parent* ::event-bus))
-                                                              event-bus)]
-                                             (om/build* f x (update-in m [:init-state] merge {::event-bus parent-bus}))))}))))</pre></td></tr><tr><td class="docs"><h3>Triggering events.</h3>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>This function sends an event from the component down through its parent components.</p>
-
-<p>  Note that <code>event</code> can be any data structure, there are no restrictions in this respect though for future compatibility,
-  a map is recommended.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn trigger
-  [owner event]
-  (let [trigger-fn (om/get-state owner ::trigger-fn)]
-    (trigger-fn event))
-  nil)  ; Avoid the following React.js warning: &quot;Returning `false` from an event handler is deprecated</pre></td></tr><tr><td class="docs"><p>This is everything you should need to use the library but you are welcome to the internals as well. :)</p>
+                     :buf-or-n 1})</pre></td></tr><tr><td class="docs"><p>This is everything you should need to use the library but you are welcome to the internals as well. :)</p>
 </td><td class="codes"></td></tr><tr><td class="docs"><h3>Looking for feedback</h3>
 
 <p>Please make sure to send your critique to <a href="mailto:gyamtso@gmail.com">gyamtso@gmail.com</a> or tweet me <strong>@martinbilski</strong>.</p>
 </td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(declare maybe-apply-xform)</pre></td></tr><tr><td class="docs"><h1>Internals</h1>
-</td><td class="codes"></td></tr><tr><td class="docs"><h3>Event bus setup</h3>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>This function adds support for triggering events and, if the component reified IGotEvent, support for handling events
-   from child components.</p>
+</td><td class="codes"><pre class="brush: clojure">(declare build-buses find-handler compose-handlers)</pre></td></tr><tr><td class="docs"><h1>Internals</h1>
+</td><td class="codes"></td></tr><tr><td class="docs"><h3>Implementation of om/root replacements.</h3>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Here's what the <code>root*</code> function does:</p>
 
-<p>   It is called from when a component mounts (see <code>root&gt;</code> above).</p>
+<ol>
+<li><p>It intercepts calls to build (via <code>:instrument</code>) to pass on event buses from parent components to their
+children (via local state).</p></li>
+<li><p>It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
+and tear down the event bus for a component and to bind <code>*parent*</code> to be used in the <code>:instrument</code> function.</p></li>
+<li><p>It passes the custom descriptor to <code>om.core/build*</code>.</p></li>
+</ol>
+</td><td class="codes"><pre class="brush: clojure">(defn root*
+  [f value options out-event-ch event-buses protocols]
+  (let [descriptor (d/make-descriptor {:componentWillMount
+                                       (fn [this super]
+                                         (init-event-bus! this protocols)
+                                         (super))
+                                       :componentWillUnmount
+                                       (fn [this super]
+                                         (shutdown-event-bus! this)
+                                         (super))
+                                       :render
+                                       (fn [this super]
+                                         (binding [*parent* this]
+                                           (super)))})]
+    (when out-event-ch
+      (if-let [bubbling-bus (::bubbling event-buses)]
+        (impl/tap bubbling-bus out-event-ch)
+        (throw (js/Error. &quot;Bubbling event bus not available. Make sure to use root&gt; or root&lt;&gt;.&quot;))))
+    (om/root f value
+             (merge options {:instrument (fn [f x m]
+                                           (let [parent-buses (or
+                                                                (and *parent* (om/get-state *parent* ::event-buses))
+                                                                event-buses)]
+                                             (om/build* f x (-&gt; m
+                                                                (update-in [:init-state] merge {::event-buses parent-buses})
+                                                                (merge {:descriptor descriptor})))))}))))</pre></td></tr><tr><td class="docs"><p>As you've learned above there are three protocols corresponding to trickling and bubbling events and to "all" events
+regardless of their direciton. Using <code>root*</code> you can pass your own custom interfaces and event buses.</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def default-protocols
+  {::all #(when (satisfies? IGotEvent %)
+           got-event)
+   ::bubbling #(when (satisfies? IGotBubblingEvent %)
+                got-bubbling-event)
+   ::trickling #(when (satisfies? IGotTricklingEvent %)
+                 got-trickling-event)})</pre></td></tr><tr><td class="docs"><h3>Event bus setup details.</h3>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>The <code>init-event-bus!</code> function adds support for triggering events and, if the component reified any of the supported
+   protocols, the code to handle events.</p>
 
-<p>   What it does is it takes the event bus from its parent component (<code>downstream</code>) and using <code>core.async/mult</code>
-   it taps into it to fork it into two branches: <code>branch</code> this component may use to handle events and
-   <code>upstream</code> to pass on to child components (see <code>root&gt;</code> above).</p>
-
-<p>   It does sets the local state:
-   ::trigger-fn  -  function that triggers an event;
-   ::event-bus   -  core.async channel to be passed to the component's children (see <code>root&gt;</code> above).</p>
-
-<p>   <strong>IMPORTANT:</strong> Do not use the local state values directly; they are for internal use only.</p>
-
-<p>   Please note that this mult/tap magic happens only if the component reifies the <code>IGotEvent</code> protocol and, to some
-   extend, for <code>IInitEventBus</code> protocol as well. For components that don't care about events, overhead is minimal.</p>
+<p>   This function is called from when a component mounts (see <code>root*</code>). It sets ::event-buses in the components local
+   state to a map containing one or more event buses.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- init-event-bus!
-  [this]
-  (trace &quot;Initializing event bus for&quot; (om/id this))
-  (let [downstream (om/get-state this ::event-bus)
-        c (om/children this)
+  [this protocols]
+  (let [c (om/children this)
         {:keys [xform buf-or-n]} (merge default-config
                                         (when (satisfies? IInitEventBus c)
-                                          (or (init-event-bus c) {})))]
-    (om/set-state! this ::trigger-fn (fn [event]
-                                       (async/put! downstream (maybe-apply-xform xform event))))
-    (when (or (satisfies? IGotEvent c) xform)
-      (let [upstream (async/chan buf-or-n xform)
-            branch (async/chan buf-or-n)
-            fork (async/mult upstream)]
-        (om/set-state! this ::close-fn (fn []
-                                         (async/untap-all fork)
-                                         (async/close! upstream)
-                                         (async/close! branch)))
-        (om/set-state! this ::event-bus upstream)
-        (async/tap fork downstream)
-        (when (satisfies? IGotEvent c)
-          (async/tap fork branch)
-          (async/go-loop []
-                         (let [[event ch] (async/alts! [branch (async/timeout 5000)])] ;; TODO: Remove this code.
-                           (if event
-                             (do
-                               (got-event c event)
-                               (recur))
-                             (when (not= ch branch)
-                               (trace (om/id this) &quot;is listening...&quot;)
-                               (recur))))))))))</pre></td></tr><tr><td class="docs"><p>This function mainly shuts down event bus channels for this component.
-   It simply calls <code>::close-fn</code> set up in <code>init-event-bus!</code> above. This also terminates <code>go-loop</code> handling events.</p>
+                                          (init-event-bus c)))]
+    (impl/with-options {:buf-or-n buf-or-n}
+                       (om/set-state! this
+                                     ::event-buses
+                                     (build-buses this xform protocols)))))</pre></td></tr><tr><td class="docs"><p>What the <code>build-buses</code> function does does is it takes the event bus from its parent component and extends it, either
+  by forking it to handle events or by creating a 'leg' of the bus with minimal overhead if the component reifies none
+  of the compatible event-handling protocols.</p>
+
+<p>  To create a handler it composes potential handlers for supported protocols. Both <code>catch-all-handler</code> and the result
+  of the application of <code>find-handler</code> can return nil but <code>compose-handlers</code> will take care of that.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn build-buses
+  [this xform protocols]
+  (let [c (om/children this)
+        catch-all-handler (find-handler c ::all protocols)]
+    (into {}
+          (for [[k bus] (om/get-state this ::event-buses)]
+            (let [handler (compose-handlers catch-all-handler (find-handler c k protocols))]
+              [k (if handler
+                   (impl/add-fork bus handler xform)
+                   (impl/add-leg bus xform))])))))</pre></td></tr><tr><td class="docs"><p>The <code>find-handler</code> function looks up a protocol builder function in <code>protocol</code> using <code>bus-key</code> as, well,
+  the key (for instance, <code>::bubbling</code>) and, if one is found, binds it to a component resulting in an event handling function.
+  If the protocol isn't implemented by the <code>component</code>, the function returns nil.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- find-handler
+  [component bus-key protocols]
+  (when-let [handler-fn ((bus-key protocols) component)]
+    (partial handler-fn component)))</pre></td></tr><tr><td class="docs"><p>To handle possible non-existent handlers (a.k.a. nils) this function returns either:</p>
+
+<ul>
+<li>an event handler calling one of more event-handing functions in <code>handlers</code> if any of the handlers is not <code>nil</code>, or</li>
+<li>nil (if all <code>handlers</code> are <code>nil</code>).</li>
+</ul>
+</td><td class="codes"><pre class="brush: clojure">(defn- compose-handlers
+  [&amp; handlers]
+  (when-let [funs (not-empty (remove nil? handlers))]
+    (fn [event]
+      (doseq [f funs]
+        (f event)))))</pre></td></tr><tr><td class="docs"><h3>Event bus shutdown.</h3>
+
+<p>When a component unmounts, event bus needs to shut down by closing all channels, terminating go loops etc.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>This function shuts down event bus for <code>this</code> component. It simply calls <code>shutdown</code> on the event bus set up in
+  <code>init-event-bus!</code> above.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- shutdown-event-bus!
   [this]
-  (om/set-state! this ::trigger-fn #(throw (js/Error. &quot;Event bus has already been shut down.&quot;)))
-  (let [c (om/children this)
-        close-fn (om/get-state this ::close-fn)]
-    (when (satisfies? IGotEvent c)
-      (trace &quot;Shutting down event bus for&quot; (om/id this))
-      (close-fn))))</pre></td></tr><tr><td class="docs"><p>For an xform it returns the result of applying xform to an event.
-  If xform is nil it returns unmodified event.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn- maybe-apply-xform
-  [xform event]
-  (if xform
-    (first (reduce (xform conj) [] [event]))
-    event))</pre></td></tr><tr><td class="docs"><h3>Custom om component descriptor</h3>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Overrides a pure method by wrapping it in f.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn- around-method
-  [method methods f]
-  (let [prev-method (method methods)]
-    (-&gt; methods
-        (assoc method #(this-as this
-                                (do
-                                   (f this (fn []
-                                             (.call prev-method this)))))))))</pre></td></tr><tr><td class="docs"><p>Given pure methods and a map of overrides, it extends pure methods with new lifecycle methods.</p>
+  (doseq [[_ bus] (om/get-state this ::event-buses)]
+    (impl/shutdown bus))
+  (om/set-state! this ::event-buses nil))                  ; TODO: Set each to nil-event-bus reporting meaningful errors.</pre></td></tr><tr><td class="docs"><h3>Event triggering details.</h3>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>The <code>trigger*</code> function triggers an <code>event</code> for a specific component (<code>owner</code>) and a bus identified by <code>event-bus-key</code>
+  (e.g. ::bubbling).</p>
+
+<p>  It simply looks up the event bus in ::event-buses local state and uses it to trigger an event.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn trigger*
+  [owner event-bus-key event]
+  (let [event-bus (event-bus-key (om/get-state owner ::event-buses))]
+    (impl/trigger event-bus event))
+  nil)  ; Avoid the following React.js warning: &quot;Returning `false` from an event handler is deprecated</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#om-event-bus.descriptor" name="om-event-bus.descriptor"><h1 class="project-name">om-event-bus.descriptor</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns om-event-bus.descriptor
+  (:require [om.core :as om :include-macros true]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(declare around-method)</pre></td></tr><tr><td class="docs"><p>This namespace contains functions that let you extend React.js component descriptors by overriding lifecycle
+methods with support for calling the original function.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Given pure methods and a map of overrides, the <code>extend-pure-methods</code> function extends pure methods with new lifecycle methods.</p>
 
 <p>  Example:</p>
 
@@ -3050,18 +3148,158 @@ children (via local state).</p></li>
     (loop [methods' methods [[new-method-name new-method-fn] &amp; new-methods'] (seq new-methods)]
       (if new-method-name
         (recur (around-method new-method-name methods' new-method-fn) new-methods')
-        methods'))))</pre></td></tr><tr><td class="docs"><p>Creates a custom descriptor with support for an event bus.</p>
+        methods'))))</pre></td></tr><tr><td class="docs"><p>This function does the actual job of overriding a pure method by wrapping it in f.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- around-method
+  [method methods f]
+  (let [prev-method (method methods)]
+    (-&gt; methods
+        (assoc method #(this-as this
+                                (do
+                                  (f this (fn []
+                                            (.call prev-method this)))))))))</pre></td></tr><tr><td class="docs"><p>Creates a custom descriptor with support for an event bus.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- make-descriptor
   [new-methods]
   (let [methods (extend-pure-methods new-methods)
         descriptor (om/specify-state-methods! (clj-&gt;js methods))]
-    descriptor))</pre></td></tr><tr><td class="docs"><h3>Debugging</h3>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Uncomment this to get status information printed to JS console.</p>
+    descriptor))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#om-event-bus.impl" name="om-event-bus.impl"><h1 class="project-name">om-event-bus.impl</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns om-event-bus.impl
+  #+clj
+  (:require [clojure.core.async :as async])
+  #+cljs
+  (:require [cljs.core.async :as async])
+  #+cljs
+  (:require-macros [cljs.core.async.macros :as async]
+                   [om-event-bus.impl :refer [options]]))</pre></td></tr><tr><td class="docs"><p>This namespace contains the actual implementation of event buses based core.async.</p>
 
-<p>  Note: Uses println.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn trace
-  [&amp; args]
-  #_(apply println args))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_om-event-bus.core">om-event-bus.core</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+<p>This is a portable .cljx file and can be used in both Clojure and ClojureScript.</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *options* {:buf-or-n 1})</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defmacro with-options
+  [opts &amp; body]
+  `(binding [*options* (merge *options* ~opts)]
+     ~@body))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defmacro options
+  []
+  `*options*)</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defprotocol ITriggerEvent
+  (trigger [_ event]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defprotocol IEventBus
+  (tap [this ch])
+  (sink [this mid-ch bus])
+  (add-leg [this]
+           [this xform])
+  (add-fork [this handler]
+            [this handler xform])
+  (shutdown [this]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defprotocol IEventRouter
+  (leg [_ parent mid-ch child])
+  (fork [_ parent child ch]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(declare bubbling-router extend-event-bus event-bus* dbg-handle-events! handle-events! maybe-apply-xform)</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">#+cljs
+(defn event-bus
+  ([]
+    (event-bus (bubbling-router)))
+  ([router]
+    (event-bus* router (async/mult (async/chan (:buf-or-n (options)))) true)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- pass-event-bus
+  [router mult]
+  (event-bus* router mult false))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- event-bus*
+  [router parent-mult close]
+  (let [mult parent-mult
+        bus (reify
+              IEventBus
+              (tap [_ ch]
+                (async/tap mult ch))
+              (sink [_ mid-ch bus]
+                (tap bus mid-ch)
+                (async/pipe mid-ch (async/muxch* mult)))
+              (add-fork [this handler]
+                (extend-event-bus this router handler))
+              (add-fork [this handler xform]
+                (extend-event-bus this router handler xform))
+              (add-leg [_]
+                (pass-event-bus router mult))
+              (add-leg [this xform]
+                (extend-event-bus this router nil xform))
+              (shutdown [_]
+                (async/untap-all mult)
+                (when close
+                  (async/close! (async/muxch* mult))))
+              ITriggerEvent
+              (trigger [_ event]
+                (async/put! (async/muxch* mult) event)))]
+    bus))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- extend-event-bus
+  ([parent-bus router handler]
+    (extend-event-bus parent-bus router handler nil))
+  ([parent-bus router handler xform]
+    (let [event-feed (when handler (async/chan (:buf-or-n (options))))
+          child-mult (async/mult (async/chan (:buf-or-n (options))))
+          mid-ch (apply async/chan (:buf-or-n (options)) (if xform [xform] []))
+          child-bus (reify
+                       IEventBus
+                       (tap [_ ch]
+                         (async/tap child-mult ch))
+                       (sink [_ mid-ch bus]
+                         (tap bus mid-ch)
+                         (async/pipe mid-ch (async/muxch* child-mult)))
+                       (add-fork [this handler]
+                         (extend-event-bus this router handler))
+                       (add-fork [this handler xform]
+                         (extend-event-bus this router handler xform))
+                       (add-leg [_]
+                         (pass-event-bus router child-mult))
+                       (add-leg [this xform]
+                         (extend-event-bus this router nil xform))
+                       (shutdown [_]
+                         (async/untap-all child-mult)
+                         (async/close! (async/muxch* child-mult))
+                         (when event-feed (async/close! event-feed))
+                         (async/close! mid-ch))
+                       ITriggerEvent
+                       (trigger [_ event]
+                         (async/put! mid-ch event)))]
+      (leg router parent-bus mid-ch child-bus)
+      (when event-feed
+        (fork router parent-bus child-bus event-feed)
+        (handle-events! event-feed handler)
+        #_(dbg-handle-events! event-feed handler))
+      child-bus)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn trickling-router
+  []
+  (reify
+    IEventRouter
+    (leg [_ parent mid-ch child]
+      (sink child mid-ch parent))
+    (fork [_ parent _ ch]
+      (tap parent ch))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn bubbling-router
+  []
+  (reify
+    IEventRouter
+    (leg [_ parent mid-ch child]
+      (sink parent mid-ch child))
+    (fork [_ _ child ch]
+      (tap child ch))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- handle-events!
+  [ch f]
+  (async/go-loop []
+    (let [event (async/&lt;! ch)]
+      (when event
+        (f event)
+        (recur)))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- dbg-handle-events!
+  [ch f]
+  (async/go-loop []
+    (let [t (async/timeout 5000)
+          [event ch] (async/alts! [ch t])]
+      (if (= ch t)
+        (do (f {:event &quot;still running&quot;})
+            (recur))
+        (when event
+          (f event)
+          (recur))))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_om-event-bus.core">om-event-bus.core</li><li class="floating-toc-li" id="floating-toc_om-event-bus.descriptor">om-event-bus.descriptor</li><li class="floating-toc-li" id="floating-toc_om-event-bus.impl">om-event-bus.impl</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
 SyntaxHighlighter.all();
 
 // hackity hack

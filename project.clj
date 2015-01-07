@@ -13,7 +13,7 @@
             :source-paths ["src"]
 
             :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
-                      [lein-marginalia "0.8.0"]
+                      [bilus/lein-marginalia "0.8.8"]
                       [quickie "0.3.6"]
                       [com.keminglabs/cljx "0.5.0"]]
 
