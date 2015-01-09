@@ -181,7 +181,7 @@
 
 ; =============================================================================
 
-(declare build-buses find-handler compose-handlers)
+(declare get-config debug? build-buses find-handler compose-handlers)
 
 ;; # Internals
 
@@ -200,14 +200,20 @@
   [f value options out-event-ch event-buses protocols]
   (let [descriptor (d/make-descriptor {:componentWillMount
                                        (fn [this super]
+                                         (when (debug? this)
+                                           (println (om/id this) "will-mount"))
                                          (init-event-bus! this protocols)
                                          (super))
                                        :componentWillUnmount
                                        (fn [this super]
+                                         (when (debug? this)
+                                           (println (om/id this) "will-unmount"))
                                          (shutdown-event-bus! this)
                                          (super))
                                        :render
                                        (fn [this super]
+                                         (when (debug? this)
+                                           (println (om/id this) "render"))
                                          (binding [*parent* this]
                                            (super)))})]
     (when out-event-ch
@@ -243,15 +249,15 @@
 
    This function is called from when a component mounts (see `root*`). It sets ::event-buses in the components local
    state to a map containing one or more event buses."
-  [this protocols]
-  (let [c (om/children this)
-        {:keys [xform buf-or-n]} (merge default-config
-                                        (when (satisfies? IInitEventBus c)
-                                          (init-event-bus c)))]
-    (impl/with-options {:buf-or-n buf-or-n}
-                       (om/set-state! this
-                                     ::event-buses
-                                     (build-buses this xform protocols)))))
+  [owner protocols]
+  (let [{:keys [xform buf-or-n debug] :as config} (get-config owner)]
+    (when debug
+      (println (om/id owner) "init-event-bus!" (when xform "+xform")))
+    (impl/with-options {:buf-or-n buf-or-n
+                        :debug    debug}
+                       (om/set-state! owner
+                                      ::event-buses
+                                      (build-buses owner xform protocols)))))
 
 (defn build-buses
   "What the `build-buses` function does does is it takes the event bus from its parent component and extends it, either
@@ -260,23 +266,40 @@
 
   To create a handler it composes potential handlers for supported protocols. Both `catch-all-handler` and the result
   of the application of `find-handler` can return nil but `compose-handlers` will take care of that."
-  [this xform protocols]
-  (let [c (om/children this)
-        catch-all-handler (find-handler c ::all protocols)]
-    (into {}
-          (for [[k bus] (om/get-state this ::event-buses)]
-            (let [handler (compose-handlers catch-all-handler (find-handler c k protocols))]
-              [k (if handler
-                   (impl/add-fork bus handler xform)
-                   (impl/add-leg bus xform))])))))
+  [owner xform protocols]
+  (let [catch-all-handler (find-handler owner ::all protocols)
+        buses (into {}
+                (for [[k bus] (om/get-state owner ::event-buses)]
+                  (let [handler (compose-handlers catch-all-handler (find-handler owner k protocols))]
+                    [k (if handler
+                         (do
+                           (when (debug? owner)
+                             (println (om/id owner) "adding fork"))
+                           (impl/add-fork bus handler xform))
+                         (do
+                           (when (debug? owner)
+                             (println (om/id owner) "adding leg"))
+                           (impl/add-leg bus xform)))])))]
+    buses))
 
 (defn- find-handler
   "The `find-handler` function looks up a protocol builder function in `protocol` using `bus-key` as, well,
   the key (for instance, `::bubbling`) and, if one is found, binds it to a component resulting in an event handling function.
   If the protocol isn't implemented by the `component`, the function returns nil."
-  [component bus-key protocols]
-  (when-let [handler-fn ((bus-key protocols) component)]
-    (partial handler-fn component)))
+  [owner bus-key protocols]
+  (let [component (om/children owner)]
+    (when-let [handler-fn ((bus-key protocols) component)]
+      (if-not (debug? owner)
+        (partial handler-fn component)
+        (fn [event]
+          (case (and (map? event)
+                     (:event event))
+            :om-event-bus.impl/alive (println (om/id owner) "Event handling go loop is running.")
+            :om-event-bus.impl/dead (println (om/id owner) "Event handling go loop has just died.")
+            (do
+              (println (map? event) (:event event))
+              (println (om/id owner) "received" event)
+              (handler-fn component event))))))))
 
 (defn- compose-handlers
   "To handle possible non-existent handlers (a.k.a. nils) this function returns either:
@@ -294,12 +317,14 @@
 ;; When a component unmounts, event bus needs to shut down by closing all channels, terminating go loops etc.
 
 (defn- shutdown-event-bus!
-  "This function shuts down event bus for `this` component. It simply calls `shutdown` on the event bus set up in
+  "This function shuts down event bus for the component. It simply calls `shutdown` on the event bus set up in
   `init-event-bus!` above."
-  [this]
-  (doseq [[_ bus] (om/get-state this ::event-buses)]
+  [owner]
+  (when (debug? owner)
+    (println (om/id owner) "shutdown-event-bus!"))
+  (doseq [[_ bus] (om/get-state owner ::event-buses)]
     (impl/shutdown bus))
-  (om/set-state! this ::event-buses nil))                  ; TODO: Set each to nil-event-bus reporting meaningful errors.
+  (om/set-state! owner ::event-buses nil))                  ; TODO: Set each to nil-event-bus reporting meaningful errors.
 
 ;; ### Event triggering details.
 
@@ -315,3 +340,17 @@
         ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
         ; as appropriate."
 
+;; ### Helpers.
+
+(defn get-config
+  "This function, `get-config` returns the component's event bus config. See `IInitEventBus`."
+  [owner]
+  (let [c (om/children owner)]
+    (merge default-config
+           (when (satisfies? IInitEventBus c)
+             (init-event-bus c)))))
+
+(defn debug?
+  "The `debug` returns true if event bus debugging is turned on for the component."
+  [owner]
+  (some? (:debug (get-config owner))))

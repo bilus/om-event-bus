@@ -10,12 +10,13 @@
                            #_[org.clojure/tools.trace "0.7.8" :scope "provided"]]
             :jar-exclusions [#"\.cljx|\.swp|\.swo|\.DS_Store"]
             :auto-clean false
-            :source-paths ["src"]
+            :source-paths ["src/cljx" "src/clj" "src/cljs"]
 
             :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
                       [bilus/lein-marginalia "0.8.8"]
                       [quickie "0.3.6"]
-                      [com.keminglabs/cljx "0.5.0"]]
+                      [com.keminglabs/cljx "0.5.0"]
+                      [lein-pprint "1.1.1"]]
 
             :prep-tasks [["cljx" "once"]]
 

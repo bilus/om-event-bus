@@ -12,7 +12,8 @@
 ;;
 ;; This is a portable .cljx file and can be used in both Clojure and ClojureScript.
 
-(def ^:dynamic *options* {:buf-or-n 1})
+(def ^:dynamic *options* {:buf-or-n 1
+                          :debug false})
 
 (defmacro with-options
   [opts & body]
@@ -41,7 +42,6 @@
 
 (declare bubbling-router extend-event-bus event-bus* dbg-handle-events! handle-events! maybe-apply-xform)
 
-#+cljs
 (defn event-bus
   ([]
     (event-bus (bubbling-router)))
@@ -61,7 +61,7 @@
                 (async/tap mult ch))
               (sink [_ mid-ch bus]
                 (tap bus mid-ch)
-                (async/pipe mid-ch (async/muxch* mult)))
+                (async/pipe mid-ch (async/muxch* mult) false))
               (add-fork [this handler]
                 (extend-event-bus this router handler))
               (add-fork [this handler xform]
@@ -71,8 +71,8 @@
               (add-leg [this xform]
                 (extend-event-bus this router nil xform))
               (shutdown [_]
-                (async/untap-all mult)
                 (when close
+                  (async/untap-all mult)
                   (async/close! (async/muxch* mult))))
               ITriggerEvent
               (trigger [_ event]
@@ -92,7 +92,7 @@
                          (async/tap child-mult ch))
                        (sink [_ mid-ch bus]
                          (tap bus mid-ch)
-                         (async/pipe mid-ch (async/muxch* child-mult)))
+                         (async/pipe mid-ch (async/muxch* child-mult) false))
                        (add-fork [this handler]
                          (extend-event-bus this router handler))
                        (add-fork [this handler xform]
@@ -112,8 +112,9 @@
       (leg router parent-bus mid-ch child-bus)
       (when event-feed
         (fork router parent-bus child-bus event-feed)
-        (handle-events! event-feed handler)
-        #_(dbg-handle-events! event-feed handler))
+        (if (:debug (options))
+          (dbg-handle-events! event-feed handler)
+          (handle-events! event-feed handler)))
       child-bus)))
 
 (defn trickling-router
@@ -147,9 +148,13 @@
   (async/go-loop []
     (let [t (async/timeout 5000)
           [event ch] (async/alts! [ch t])]
+      ; Use events below instead of println so the component using may identify itself when showing the event to
+      ; make the message understandable (printing just a bunch of "I'm alive" messages without saying _who_ is
+      ; alive doesn't add much value).
       (if (= ch t)
-        (do (f {:event "still running"})
+        (do (f {:event ::alive})
             (recur))
-        (when event
-          (f event)
-          (recur))))))
+        (if event
+          (do (f event)
+              (recur))
+          (f {:event ::dead}))))))

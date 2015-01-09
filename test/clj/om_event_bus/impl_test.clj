@@ -27,13 +27,26 @@
   [ch]
   (doall (take-while some? (repeatedly #(safe-take! ch)))))
 
-(defn matches? [expected actual]
+(defn matching? [expected actual]
   (= (sort expected) (sort actual)))
 
 (defn wrap [f wrapper-f]
   (fn [& args]
     (apply wrapper-f args)
     (apply f args)))
+
+(defn wait [ms]
+  (async/<!! (async/timeout ms)))
+
+(defn mapping [f]
+  (fn [reducing]
+    (fn
+      ([]
+        (reducing))
+      ([result]
+        result)
+      ([result input]
+          (reducing result (f input))))))
 
 ;=======================================================================================================================
 
@@ -84,7 +97,7 @@
 
     (testing "triggering"
       (trigger grandchild "event")
-      (is (matches? ["[child] event" "[parent] event"]
+      (is (matching? ["[child] event" "[parent] event"]
                            (take-all! os))))
     (testing "shutdown"
       (shutdown parent)
@@ -99,13 +112,13 @@
         grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))))]
     (testing "triggering"
       (trigger bus "event")
-      (is (matches? ["[grandchild] event" "[child] event" "[parent] event"]
+      (is (matching? ["[grandchild] event" "[child] event" "[parent] event"]
                     (take-all! os))))
 
     (testing "shutdown"
       (shutdown child)
       (trigger bus "event")
-      (is (matches? ["[parent] event"]
+      (is (matching? ["[parent] event"]
                     (take-all! os))))))
 
 (deftest test-event-handler
@@ -141,7 +154,7 @@
     (testing "broadcasting to all"
      (let [{:keys [os broadcast]} (set-up)]
        (trigger broadcast "event")
-       (is (matches? ["parent received 'event' from a parent"
+       (is (matching? ["parent received 'event' from a parent"
                       "child A received 'event' from a parent"
                       "child B received 'event' from a parent"]
                      (take-all! os)))))
@@ -149,24 +162,19 @@
     (testing "bubbling from child"
       (let [{:keys [os child-a-bubble]} (set-up)]
         (trigger child-a-bubble "event")
-        (is (matches? ["parent received 'event' from a child"]
+        (is (matching? ["parent received 'event' from a child"]
                       (take-all! os)))))
 
     (testing "trickling from parent"
       (let [{:keys [os parent-trickle]} (set-up)]
         (trigger parent-trickle "event")
 
-        (is (matches? ["child A received 'event' from a parent"
+        (is (matching? ["child A received 'event' from a parent"
                        "child B received 'event' from a parent"]
                       (take-all! os)))))))
 
 (deftest test-xform
-  (letfn [(mapping
-            [f]
-            (fn [reducing]
-              (fn [result input]
-                (reducing result (f input)))))
-          (add-info
+  (letfn [(add-info
             [info]
             (mapping #(str % info)))]
 
@@ -178,7 +186,7 @@
             grandchild (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))
             _ (add-leg grandchild)]
         (trigger grandchild "event")
-        (is (matches? ["[child] event (pass grandchild)"
+        (is (matching? ["[child] event (pass grandchild)"
                        "[parent] event (pass grandchild) (pass child)"]
                       (take-all! os)))))
 
@@ -189,7 +197,7 @@
             child (add-fork parent (fn [e] (async/put! os (str "[child] " e))) (add-info " (pass child)"))
             _ (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
         (trigger top "event")
-        (is (matches? ["[grandchild] event (pass parent) (pass child)"
+        (is (matching? ["[grandchild] event (pass parent) (pass child)"
                        "[child] event (pass parent)"
                        "[parent] event"]
                       (take-all! os)))))
@@ -201,7 +209,7 @@
             child (add-leg parent (add-info " (pass child)"))
             grandchild (add-leg child (add-info " (pass grandchild)"))]
         (trigger grandchild "event")
-        (is (matches? ["[parent] event (pass grandchild) (pass child)"]
+        (is (matching? ["[parent] event (pass grandchild) (pass child)"]
                       (take-all! os)))))
 
     (testing "trickling bus legs"
@@ -211,8 +219,15 @@
             child (add-leg parent (add-info " (pass child)"))
             _ (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
         (trigger top "event")
-        (is (matches? ["[grandchild] event (pass parent) (pass child)"]
-                      (take-all! os)))))))
+        (is (matching? ["[grandchild] event (pass parent) (pass child)"]
+                      (take-all! os)))))
+    (testing "shutdown"
+      (let [os (async/chan 1024)
+            top (event-bus (trickling-router))
+            parent (add-leg top (add-info " (pass parent)"))
+            child (add-leg parent (add-info " (pass child)"))
+            _ (add-fork child (fn [e] (async/put! os (str "[grandchild] " e))) (add-info " (pass grandchild)"))]
+        (shutdown child)))))
 
 (deftest test-with-options
   (testing "buffer size"
@@ -226,17 +241,52 @@
                           (add-leg))
                       (is (= [666 1] (distinct @buf-sizes)))))))) ; core.async creates chans of size 1 internally
 
+(deftest test-killing-last-leg
+  (testing "remove last leg"
+    (let [os (async/chan 1024)
+         top (event-bus (bubbling-router))
+         child (-> top
+                   (add-leg)
+                   (add-leg)
+                   (add-fork (fn [x] (async/put! os x)))
+                   (add-leg)
+                   (add-leg))
+         grandchild (-> child
+                        (add-leg))]
+     (trigger child "before shutdown")
+     (shutdown grandchild)
+     (trigger child "after shutdown")
+     (is (matching? ["before shutdown" "after shutdown"]
+                    (take-all! os)))))
+  (testing "removal of leg after fork"
+    (let [xform (mapping identity)
+          os (async/chan 1024)
+          top (event-bus (bubbling-router))
+          parent (-> top
+                     (add-leg xform)
+                     (add-leg xform)
+                     (add-fork (fn [x] (async/put! os x)) xform))
+          child (-> parent
+                    (add-leg xform)
+                    (add-leg xform)
+                    (add-leg xform))
+          new-child (-> parent
+                        (add-leg xform))]
+     (shutdown new-child)
+     (trigger child "after shutdown")
+     (is (matching? ["after shutdown"]
+                    (take-all! os))))))
 
-
-; TODO: Write an example about broadcasting to all components within a tree.
 ; TODO: Update idealist (coordination between sortables).
 
+
 ; TODO: Write documentation for impl.
-; TODO: Update the Readme.
+; TODO: Update the Readme. (mention debugging)
 
 ; TODO: Build marginalia docs.
 ; TODO: Build examples and copy them to gh-pages branch. Link to new examples from Readme.
 
 ; TODO: Use one go loop per component. (?)
 ; TODO: If one out of two om roots is killed go-loop collecting events still works. Write example two_roots.
+
 
