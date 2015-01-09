@@ -294,8 +294,8 @@
         (fn [event]
           (case (and (map? event)
                      (:event event))
-            :om-event-bus.impl/alive (println (om/id owner) "Event handling go loop is running.")
-            :om-event-bus.impl/dead (println (om/id owner) "Event handling go loop has just died.")
+            :om-event-bus.impl/alive (println (om/id owner) "Event-handling go loop is running.")
+            :om-event-bus.impl/dead (println (om/id owner) "Event-handling go loop has just died.")
             (do
               (println (map? event) (:event event))
               (println (om/id owner) "received" event)

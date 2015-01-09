@@ -277,14 +277,14 @@
      (is (matching? ["after shutdown"]
                     (take-all! os))))))
 
-; TODO: Update idealist (coordination between sortables).
-
-
 ; TODO: Write documentation for impl.
 ; TODO: Update the Readme. (mention debugging)
+; TODO: Update examples so println gets appended to parent and remove mentions of having to open console.
 
 ; TODO: Build marginalia docs.
 ; TODO: Build examples and copy them to gh-pages branch. Link to new examples from Readme.
+
+; --
 
 ; TODO: Use one go loop per component. (?)
 ; TODO: If one out of two om roots is killed go-loop collecting events still works. Write example two_roots.
