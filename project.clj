@@ -30,6 +30,8 @@
                             "examples/nested/out"
                             "examples/disable/main.js"
                             "examples/disable/out"
+                            "examples/debug/main.js"
+                            "examples/debug/out"
                             "examples/protocols/main.js"
                             "examples/protocols/out"
                             "target/"]
@@ -80,6 +82,12 @@
                                  {:source-paths ["examples/disable/src" "src/cljs" "target/classes/"]
                                   :compiler     {:output-to     "examples/disable/main.js"
                                                  :output-dir    "examples/disable/out"
+                                                 :source-map    true
+                                                 :optimizations :none}}
+                                 :debug
+                                 {:source-paths ["examples/debug/src" "src/cljs" "target/classes/"]
+                                  :compiler     {:output-to     "examples/debug/main.js"
+                                                 :output-dir    "examples/debug/out"
                                                  :source-map    true
                                                  :optimizations :none}}
                                  :protocols
