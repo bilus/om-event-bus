@@ -1,29 +1,36 @@
 # om-event-bus
 
-**Work in progress. This is a pre-alpha release and the interface may change. Feedback and critique are most welcome at @martinbilski or gyamtso@gmail.com.**
+**Work in progress. Feedback and critique are most welcome at @martinbilski or gyamtso@gmail.com.**
 
 
 
-Use this library when you want child components to communicate with parent components. It's usually best to avoid
-coupling as much as possible but if you are writing complex UI components this may be unavoidable.
-
-There are two common ways to do this that I know of: passing callbacks and using core.async. This library attempts to
- offer a more structured and seamless approach with less noise.
+Use this library when you want child components to communicate with parent components or the other way around without
+having to explicitly pass core.async channels around or using callbacks.
 
 In this approach components nested within each other can send custom events to their parents at any level.
 
-This idea is best expressed as an imaginary bus connecting components.
+Use this library whenever you need Om components to send events either down to components nested within them or up to
+their parents.
 
-![High-level overview](https://raw.githubusercontent.com/bilus/om-event-bus/master/docs/event_bus_2.png)
+Let's say you have three om components nested inside each other:
 
-One important feature is that events flow in only one direction, i.e. from children to their ancestors, never the other
-way. In addition, an event can be handled by any number of component wrapping the source component.
+![Three nested components](event_bus_1.png)
 
-The library does its best to create minimal or no overhead for components that do not reify the `IGotEvent` interface.
+When a component triggers an event, it can send it in two possible directions:
+
+ - it can **bubble** it to its parents all the way to the top, or
+ - it can **trickle** an event to its children.
+
+In om-event-bus each direction is handled by a separate event bus. Components connect to an event bus to handle events
+passing through it.
+
+![Bubbling vs. trickling](event_bus_2.png)
+
+The library does its best to create minimal or no overhead for components that do not handle events.
 
 ## Quick start
 
-Add `[om-event-bus "0.1.1-SNAPSHOT"]` as leiningen dependency.
+Add [![Clojars Project](http://clojars.org/om-event-bus/latest-version.svg)](http://clojars.org/om-event-bus) as leiningen dependency.
 
 In addition to [om](https://github.com/swannodette/om), the library also relies on
 [core.async](https://github.com/clojure/core.async) so make sure to include those as well.
@@ -36,7 +43,7 @@ Require namespace:
            ... etc. ...))
 ```
 
-Sending events:
+Sending events by bubbling them up to the parents:
 
 ```clojure
 (defn child-view [app owner]
@@ -45,41 +52,56 @@ Sending events:
         (render [_]
                 (dom/button
                   #js
+                  {:onClick #(event-bus/bubble owner "event from child")}
+                  ; or
                   {:onClick #(event-bus/trigger owner "event from child")}
+                  "Click me!"))))
+```
+
+Sending events by trickling them down to the child componensts:
+
+```clojure
+(defn parent-view [app owner]
+      (reify
+        om/IRender
+        (render [_]
+                (dom/button
+                  #js
+                  {:onClick #(event-bus/trickle owner "event from parent")}
                   "Click me!"))))
 ```
 
 Receiving events:
 
 ```clojure
-(defn parent-view [app owner]
+(defn some-view [app owner]
       (reify
         event-bus/IGotEvent
         (got-event [_ ev]
-                   (js/console.log "parent received" (clj->js ev)))
+                   (js/console.log "component received" (clj->js ev)))
         om/IRender
         (render [_]
          (om/build child-view app))))
 ```
 
-To hook this up, use `event-bus/root>` instead of `om.core/root`:
+To hook this up, use `event-bus/root<>` instead of `om.core/root`:
 
 ```clojure
-(event-bus/root>
+(event-bus/root<>
   parent-view
   app-state
   {:target (. js/document (getElementById "app"))})
 ```
 
-Note that `event-bus/root` uses `:instrument` and `:descriptor` keys. You need to be aware of that if your code uses either.
+Note that `event-bus/root<>` uses `:instrument` and `:descriptor` keys. You need to be aware of that if your code uses either.
 
 ## More information
 
-1. [Reference](http://bilus.github.io/om-event-bus/) - in addition to getting started material and function reference,
-it lets you peek into the internals.
+To learn more about the library, read [this](http://bilus.github.io/om-event-bus/); in addition to a more detailed
+introduction going beyond the basics above, it lets you peek into the internals.
 
-2. [Examples](https://github.com/bilus/om-event-bus/tree/master/examples) - running examples and watching JS console may
-be the fastest way to get the intuition of how events work in the practice.
+Taking a look at the [examples](https://github.com/bilus/om-event-bus/tree/master/examples) may be the fastest way to
+get the intuitive feel for how things work in the practice.
 
 The following examples are available:
 
@@ -87,8 +109,10 @@ The following examples are available:
 *  Nested components [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/nested/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/nested/index.html)]
 *  Using xforms [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/xform/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/xform/index.html)]
 *  Receiving all events using core.async [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/go_loop/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/go_loop/index.html)]
+*  Debugging [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/debug/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/debug/index.html)]
+*  Other event-handling protocols [[source code](https://github.com/bilus/om-event-bus/blob/master/examples/protocols/src/core.cljs)] [[demo](http://bilus.github.io/om-event-bus/examples/protocols/index.html)]
 
-*When using the demos, open JS console to see the output. Please note that demos are in development version so they may take a while to load depending on your Internet connection.*
+*When trying out the demos, open JS console to see the output. Please note that demos are in development version so they may take a while to load depending on your Internet connection.*
 
 ## Advanced usage
 
@@ -164,6 +188,31 @@ parent received {:from child, :path [:1 :0]}
 See [this](https://github.com/bilus/om-event-bus/tree/master/examples/xform) for a complete version of this example.
 
 
+### Bubbling and trickling
+
+In addition to using `IGotEvent` to handle both events coming from children and parents of the component, you can reify
+either `IGotBubblingEvent` and/or `IGotTricklingEvent` to handle separately events that come respectively from child
+components and parents.
+
+Example:
+
+```clojure
+(defn some-view
+      [app owner]
+      (reify
+        event-bus/IGotBubblingEvent
+        (got-event [_ ev]
+                   (println "received event from a child" ev))
+        event-bus/IGotTricklingEvent
+        (got-event [_ ev]
+                   (println "received event from a parent" ev))
+        ...
+```
+
+As an optimization, if you only use trickling or bubbling events, instead of `root<>` which supports events going in both directions,
+i.e. both up to parents and down to children, you can use either `root>` to only support bubbling events or `root<` to
+add support just trickling. This will reduce the overhead because only one event bus will be created instead of two.
+
 ## Building examples
 
 ```
@@ -177,6 +226,6 @@ Open the generated html files, e.g. `examples/simple/index.html`.
 
 ## License
 
-Copyright © 2014 Marcin Bilski
+Copyright © 2015 Marcin Bilski
 
 Distributed under the Eclipse Public License (see the accompanying epl.html file).

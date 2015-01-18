@@ -8,9 +8,12 @@
                    [om-event-bus.impl :refer [options]])
   )
 
+;; ## Event bus implementation
+
 ;; This namespace contains the actual implementation of event buses based core.async.
 ;;
 ;; This is a portable .cljx file and can be used in both Clojure and ClojureScript.
+
 
 (def ^:dynamic *options* {:buf-or-n 1
                           :debug false})
