@@ -14,7 +14,7 @@ their parents.
 
 Let's say you have three om components nested inside each other:
 
-![Three nested components](event_bus_1.png)
+![Three nested components](https://raw.githubusercontent.com/bilus/om-event-bus/master/docs/event_bus_1.png)
 
 When a component triggers an event, it can send it in two possible directions:
 
@@ -24,7 +24,7 @@ When a component triggers an event, it can send it in two possible directions:
 In om-event-bus each direction is handled by a separate event bus. Components connect to an event bus to handle events
 passing through it.
 
-![Bubbling vs. trickling](event_bus_2.png)
+![Bubbling vs. trickling](https://raw.githubusercontent.com/bilus/om-event-bus/master/docs/event_bus_1.png)
 
 The library does its best to create minimal or no overhead for components that do not handle events.
 
