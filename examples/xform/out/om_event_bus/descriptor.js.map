@@ -1,0 +1,17 @@
+{"version":3,
+ "file":
+ "/Users/martinb/dev/Logoot/om-event-bus/examples/xform/out/om_event_bus/descriptor.js",
+ "sources":["descriptor.cljs"],
+ "lineCount":92,
+ "mappings":
+ ";AACA;;;AAGA,AAAA,AAKA;;;;;;;;;;;;;;8CAAA,9CAAOA;;wCAaHC;AAbJ,AAcI,OAACC,8BAAoBC,qBAAgBF;;wCACrCG,SAAQH;AAfZ,AAgBI,IAAOW,uBAASR;IAAhBC,WAAyE,AAACW,wBAAIf;IAA9EK,aAAAD;IAAAE,aAAA,AAAAC,wBAAAF,WAAA,IAAA;sBAAA,AAAAE,wBAAAD,WAAA,IAAA,zDAA0BM;oBAA1B,AAAAL,wBAAAD,WAAA,IAAA,vDAA0CO;+BAA1C,AAAAL,4BAAAH,WAAA,lEAA2DS;AAA3D,AAAA,IAAOH,2BAAAA;IAAPP,eAAAA;;AAAA,AAAA,IAAOO,2BAAAA;IAAPF,aAAAL;IAAAM,aAAA,AAAAH,wBAAAE,WAAA,IAAA;0BAAA,AAAAF,wBAAAG,WAAA,IAAA,7DAA0BE;wBAA1B,AAAAL,wBAAAG,WAAA,IAAA,3DAA0CG;mCAA1C,AAAAL,4BAAAC,WAAA,tEAA2DK;AAA3D,AACE,oBAAIF;AACF,eAAO,AAACI,gDAAcJ,oBAAgBD,yBAASE;eAAeC;;;;;AAC9DH;;;;;+BAJJR,SAAQH;;;wCAARG;;wCAAAA,SAAQH;;;;;;;;;AAMZ;;;wCAAA,xCAAOgB,gEAEJC,OAAOd,SAAQe;AAFlB,AAGE,IAAMC,cAAY,AAACF,iBAAOd;AAA1B,iCACMA,jCACA,iDAAA,1CAACiB,mCAAMH;;AAAP,AAAe,YAAA,RAASI;AAAT,AACS,AACE,OAACH,YAAEG,MAAK;;AAAA,AACE,OAAOF,iBAAYE;;;;;;AAE/D;;;0CAAA,1CAAOC,oEAEJtB;AAFH,AAGE,IAAMG,WAAQ,AAACJ,sDAAoBC;IAC7BuB,aAAW,AAACC,8CAA0B,AAACC,+BAAQtB;AADrD,AAEEoB",
+ "names":
+ ["om-event-bus.descriptor/extend-pure-methods", "new-methods",
+  "extend-pure-methods", "om.core/pure-methods", "methods", "G__80310",
+  "vec__80311", "vec__80312", "cljs.core/nth", "cljs.core/nthnext",
+  "vec__80313", "vec__80314", "methods'", "new-method-name",
+  "new-method-fn", "new-methods'", "cljs.core/seq",
+  "om-event-bus.descriptor/around-method", "method", "f",
+  "prev-method", "cljs.core/assoc", "this",
+  "om-event-bus.descriptor/make-descriptor", "descriptor",
+  "om.core/specify-state-methods!", "cljs.core/clj->js"]}

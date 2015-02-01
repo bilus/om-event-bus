@@ -8,13 +8,13 @@
  "names":
  ["cljs.core/enable-console-print!", "examples.simple.core/app-state",
   "cljs.core/atom", "examples.simple.core/child-view", "child-view",
-  "app", "owner", "examples.simple.core/t18222", "_18224", "meta18223",
+  "app", "owner", "examples.simple.core/t64940", "_64942", "meta64941",
   "this__4217__auto__", "writer__4218__auto__", "opt__4219__auto__",
-  "cljs.core/-write", "examples.simple.core/->t18222", "_",
+  "cljs.core/-write", "examples.simple.core/->t64940", "_",
   "js/React.DOM.div", "js/React.DOM.button",
   "om-event-bus.core/trigger", "om.core/id",
   "examples.simple.core/parent-view", "parent-view",
-  "examples.simple.core/t18228", "_18230", "meta18229",
-  "examples.simple.core/->t18228", "ev", "cljs.core/println",
+  "examples.simple.core/t64946", "_64948", "meta64947",
+  "examples.simple.core/->t64946", "ev", "cljs.core/println",
   "cljs.core/apply", "om.dom/div", "js/React.DOM.span",
   "om.core/build", "om-event-bus.core/root>", "js/document"]}

@@ -1,14 +1,106 @@
 // Compiled by ClojureScript 0.0-2505
 goog.provide('om_event_bus.core');
 goog.require('cljs.core');
+goog.require('om_event_bus.descriptor');
+goog.require('om_event_bus.impl');
 goog.require('cljs.core.async');
 goog.require('om.core');
 
 
 
 
-om_event_bus.core.IGotEvent = (function (){var obj18882 = {};
-return obj18882;
+om_event_bus.core._STAR_parent_STAR_ = null;
+/**
+* The `root<>` function adds support both for bubbling (child to parents) and trickling (parent to children) events.
+* 
+* > **Note**
+* >
+* > The arity 4 version lets you specify a channel if you also want to handle events outside of component hierarchy.
+* > If you pass a channel to receive events through, you **MUST** consume events.
+* >
+* > See [this example](https://github.com/bilus/om-event-bus/blob/master/examples/go_loop/src/core.cljs) ([demo](http://bilus.github.io/om-event-bus/examples/go_loop/index.html)).
+* @param {...*} var_args
+*/
+om_event_bus.core.root_LT__GT_ = (function() { 
+var root_LT__GT___delegate = function (f,value,options,p__81577){
+var vec__81579 = p__81577;
+var out_event_ch = cljs.core.nth.call(null,vec__81579,(0),null);
+return om_event_bus.core.root_STAR_.call(null,f,value,options,out_event_ch,new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword("om-event-bus.core","bubbling","om-event-bus.core/bubbling",792096109),om_event_bus.impl.event_bus.call(null,om_event_bus.impl.bubbling_router.call(null)),new cljs.core.Keyword("om-event-bus.core","trickling","om-event-bus.core/trickling",860880220),om_event_bus.impl.event_bus.call(null,om_event_bus.impl.trickling_router.call(null))], null),om_event_bus.core.default_protocols);
+};
+var root_LT__GT_ = function (f,value,options,var_args){
+var p__81577 = null;
+if (arguments.length > 3) {
+  p__81577 = cljs.core.array_seq(Array.prototype.slice.call(arguments, 3),0);
+} 
+return root_LT__GT___delegate.call(this,f,value,options,p__81577);};
+root_LT__GT_.cljs$lang$maxFixedArity = 3;
+root_LT__GT_.cljs$lang$applyTo = (function (arglist__81580){
+var f = cljs.core.first(arglist__81580);
+arglist__81580 = cljs.core.next(arglist__81580);
+var value = cljs.core.first(arglist__81580);
+arglist__81580 = cljs.core.next(arglist__81580);
+var options = cljs.core.first(arglist__81580);
+var p__81577 = cljs.core.rest(arglist__81580);
+return root_LT__GT___delegate(f,value,options,p__81577);
+});
+root_LT__GT_.cljs$core$IFn$_invoke$arity$variadic = root_LT__GT___delegate;
+return root_LT__GT_;
+})()
+;
+/**
+* Use `root>` instead of om.core/root to add support for sending events from child components to parent components only (bubbling).
+* 
+* > **Note**
+* >
+* > Similarly too `root<>`, the arity 4 version lets you specify a channel if you also want to handle events outside of
+* > component hierarchy and if you pass the channel you **MUST** consume events.
+*/
+om_event_bus.core.root_GT_ = (function() {
+var root_GT_ = null;
+var root_GT___3 = (function (f,value,options){
+return root_GT_.call(null,f,value,options,null);
+});
+var root_GT___4 = (function (f,value,options,out_event_ch){
+return om_event_bus.core.root_STAR_.call(null,f,value,options,out_event_ch,new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword("om-event-bus.core","bubbling","om-event-bus.core/bubbling",792096109),om_event_bus.impl.event_bus.call(null,om_event_bus.impl.bubbling_router.call(null))], null),om_event_bus.core.default_protocols);
+});
+root_GT_ = function(f,value,options,out_event_ch){
+switch(arguments.length){
+case 3:
+return root_GT___3.call(this,f,value,options);
+case 4:
+return root_GT___4.call(this,f,value,options,out_event_ch);
+}
+throw(new Error('Invalid arity: ' + arguments.length));
+};
+root_GT_.cljs$core$IFn$_invoke$arity$3 = root_GT___3;
+root_GT_.cljs$core$IFn$_invoke$arity$4 = root_GT___4;
+return root_GT_;
+})()
+;
+/**
+* Use `root<` instead of om.core/root to add support for sending events from parent components to child components only (trickling).
+*/
+om_event_bus.core.root_LT_ = (function root_LT_(f,value,options){
+return om_event_bus.core.root_STAR_.call(null,f,value,options,null,new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword("om-event-bus.core","trickling","om-event-bus.core/trickling",860880220),om_event_bus.impl.event_bus.call(null,om_event_bus.impl.trickling_router.call(null))], null),om_event_bus.core.default_protocols);
+});
+/**
+* The `bubble` function sends an event from `owner` up to its parents.
+*/
+om_event_bus.core.bubble = (function bubble(owner,event){
+return om_event_bus.core.trigger_STAR_.call(null,owner,new cljs.core.Keyword("om-event-bus.core","bubbling","om-event-bus.core/bubbling",792096109),event);
+});
+om_event_bus.core.trickle = (function trickle(owner,event){
+return om_event_bus.core.trigger_STAR_.call(null,owner,new cljs.core.Keyword("om-event-bus.core","trickling","om-event-bus.core/trickling",860880220),event);
+});
+/**
+* The `trigger` function simply bubbles an event.
+*/
+om_event_bus.core.trigger = (function trigger(owner,event){
+return om_event_bus.core.bubble.call(null,owner,event);
+});
+
+om_event_bus.core.IGotEvent = (function (){var obj81582 = {};
+return obj81582;
 })();
 
 om_event_bus.core.got_event = (function got_event(_,event){
@@ -38,8 +130,70 @@ throw cljs.core.missing_protocol.call(null,"IGotEvent.got-event",_);
 });
 
 
-om_event_bus.core.IInitEventBus = (function (){var obj18884 = {};
-return obj18884;
+om_event_bus.core.IGotBubblingEvent = (function (){var obj81584 = {};
+return obj81584;
+})();
+
+om_event_bus.core.got_bubbling_event = (function got_bubbling_event(_,event){
+if((function (){var and__3618__auto__ = _;
+if(and__3618__auto__){
+return _.om_event_bus$core$IGotBubblingEvent$got_bubbling_event$arity$2;
+} else {
+return and__3618__auto__;
+}
+})()){
+return _.om_event_bus$core$IGotBubblingEvent$got_bubbling_event$arity$2(_,event);
+} else {
+var x__4274__auto__ = (((_ == null))?null:_);
+return (function (){var or__3630__auto__ = (om_event_bus.core.got_bubbling_event[goog.typeOf(x__4274__auto__)]);
+if(or__3630__auto__){
+return or__3630__auto__;
+} else {
+var or__3630__auto____$1 = (om_event_bus.core.got_bubbling_event["_"]);
+if(or__3630__auto____$1){
+return or__3630__auto____$1;
+} else {
+throw cljs.core.missing_protocol.call(null,"IGotBubblingEvent.got-bubbling-event",_);
+}
+}
+})().call(null,_,event);
+}
+});
+
+
+om_event_bus.core.IGotTricklingEvent = (function (){var obj81586 = {};
+return obj81586;
+})();
+
+om_event_bus.core.got_trickling_event = (function got_trickling_event(_,event){
+if((function (){var and__3618__auto__ = _;
+if(and__3618__auto__){
+return _.om_event_bus$core$IGotTricklingEvent$got_trickling_event$arity$2;
+} else {
+return and__3618__auto__;
+}
+})()){
+return _.om_event_bus$core$IGotTricklingEvent$got_trickling_event$arity$2(_,event);
+} else {
+var x__4274__auto__ = (((_ == null))?null:_);
+return (function (){var or__3630__auto__ = (om_event_bus.core.got_trickling_event[goog.typeOf(x__4274__auto__)]);
+if(or__3630__auto__){
+return or__3630__auto__;
+} else {
+var or__3630__auto____$1 = (om_event_bus.core.got_trickling_event["_"]);
+if(or__3630__auto____$1){
+return or__3630__auto____$1;
+} else {
+throw cljs.core.missing_protocol.call(null,"IGotTricklingEvent.got-trickling-event",_);
+}
+}
+})().call(null,_,event);
+}
+});
+
+
+om_event_bus.core.IInitEventBus = (function (){var obj81588 = {};
+return obj81588;
 })();
 
 om_event_bus.core.init_event_bus = (function init_event_bus(_){
@@ -69,200 +223,68 @@ throw cljs.core.missing_protocol.call(null,"IInitEventBus.init-event-bus",_);
 });
 
 om_event_bus.core.default_config = new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null,"xform","xform",-1725711008),null,new cljs.core.Keyword(null,"buf-or-n","buf-or-n",1007620719),(1)], null);
-om_event_bus.core._STAR_parent_STAR_ = null;
+
+
+
+
 /**
-* Use `root>` instead of om.core/root to add support for event bus functionality to all components.
+* Here's what the `root*` function does:
 * 
-* The arity 4 version lets you specify the channel if you also want to handle events outside of component hierarchy.
+* 1. It intercepts calls to build (via `:instrument`) to pass on event buses from parent components to their
+* children (via local state).
 * 
-* **IMPORTANT:** If you pass your own event bus channel, you **MUST** consume events.
-* 
-* What the `root>` function does is in the essence two things:
-* 
-* 1. It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
+* 2. It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
 * and tear down the event bus for a component and to bind `*parent*` to be used in the `:instrument` function.
 * 
-* 2. It intercepts calls to build (via `:instrument`) to pass on event bus channels from parent components to their
-* children (via local state).
+* 3. It passes the custom descriptor to `om.core/build*`.
 */
-om_event_bus.core.root_GT_ = (function() {
-var root_GT_ = null;
-var root_GT___3 = (function (f,value,options){
-var event_bus = cljs.core.async.chan.call(null,(1));
-root_GT_.call(null,f,value,options,event_bus);
-
-var c__5869__auto__ = cljs.core.async.chan.call(null,(1));
-cljs.core.async.impl.dispatch.run.call(null,((function (c__5869__auto__,event_bus){
-return (function (){
-var f__5870__auto__ = (function (){var switch__5854__auto__ = ((function (c__5869__auto__,event_bus){
-return (function (state_18923){
-var state_val_18924 = (state_18923[(1)]);
-if((state_val_18924 === (7))){
-var inst_18919 = (state_18923[(2)]);
-var state_18923__$1 = state_18923;
-var statearr_18925_18939 = state_18923__$1;
-(statearr_18925_18939[(2)] = inst_18919);
-
-(statearr_18925_18939[(1)] = (3));
-
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
+om_event_bus.core.root_STAR_ = (function root_STAR_(f,value,options,out_event_ch,event_buses,protocols){
+var descriptor = om_event_bus.descriptor.make_descriptor.call(null,new cljs.core.PersistentArrayMap(null, 3, [new cljs.core.Keyword(null,"componentWillMount","componentWillMount",-285327619),(function (this$,super$){
+if(cljs.core.truth_(om_event_bus.core.debug_QMARK_.call(null,this$))){
+cljs.core.println.call(null,om.core.id.call(null,this$),"will-mount");
 } else {
-if((state_val_18924 === (6))){
-var state_18923__$1 = state_18923;
-var statearr_18926_18940 = state_18923__$1;
-(statearr_18926_18940[(2)] = null);
-
-(statearr_18926_18940[(1)] = (7));
-
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-if((state_val_18924 === (5))){
-var state_18923__$1 = state_18923;
-var statearr_18927_18941 = state_18923__$1;
-(statearr_18927_18941[(2)] = null);
-
-(statearr_18927_18941[(1)] = (2));
-
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-if((state_val_18924 === (4))){
-var inst_18914 = (state_18923[(2)]);
-var state_18923__$1 = state_18923;
-if(cljs.core.truth_(inst_18914)){
-var statearr_18928_18942 = state_18923__$1;
-(statearr_18928_18942[(1)] = (5));
-
-} else {
-var statearr_18929_18943 = state_18923__$1;
-(statearr_18929_18943[(1)] = (6));
-
 }
 
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-if((state_val_18924 === (3))){
-var inst_18921 = (state_18923[(2)]);
-var state_18923__$1 = state_18923;
-return cljs.core.async.impl.ioc_helpers.return_chan.call(null,state_18923__$1,inst_18921);
-} else {
-if((state_val_18924 === (2))){
-var state_18923__$1 = state_18923;
-return cljs.core.async.impl.ioc_helpers.take_BANG_.call(null,state_18923__$1,(4),event_bus);
-} else {
-if((state_val_18924 === (1))){
-var state_18923__$1 = state_18923;
-var statearr_18930_18944 = state_18923__$1;
-(statearr_18930_18944[(2)] = null);
-
-(statearr_18930_18944[(1)] = (2));
-
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-return null;
-}
-}
-}
-}
-}
-}
-}
-});})(c__5869__auto__,event_bus))
-;
-return ((function (switch__5854__auto__,c__5869__auto__,event_bus){
-return (function() {
-var state_machine__5855__auto__ = null;
-var state_machine__5855__auto____0 = (function (){
-var statearr_18934 = [null,null,null,null,null,null,null];
-(statearr_18934[(0)] = state_machine__5855__auto__);
-
-(statearr_18934[(1)] = (1));
-
-return statearr_18934;
-});
-var state_machine__5855__auto____1 = (function (state_18923){
-while(true){
-var ret_value__5856__auto__ = (function (){try{while(true){
-var result__5857__auto__ = switch__5854__auto__.call(null,state_18923);
-if(cljs.core.keyword_identical_QMARK_.call(null,result__5857__auto__,new cljs.core.Keyword(null,"recur","recur",-437573268))){
-continue;
-} else {
-return result__5857__auto__;
-}
-break;
-}
-}catch (e18935){if((e18935 instanceof Object)){
-var ex__5858__auto__ = e18935;
-var statearr_18936_18945 = state_18923;
-(statearr_18936_18945[(5)] = ex__5858__auto__);
-
-
-cljs.core.async.impl.ioc_helpers.process_exception.call(null,state_18923);
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-throw e18935;
-
-}
-}})();
-if(cljs.core.keyword_identical_QMARK_.call(null,ret_value__5856__auto__,new cljs.core.Keyword(null,"recur","recur",-437573268))){
-var G__18946 = state_18923;
-state_18923 = G__18946;
-continue;
-} else {
-return ret_value__5856__auto__;
-}
-break;
-}
-});
-state_machine__5855__auto__ = function(state_18923){
-switch(arguments.length){
-case 0:
-return state_machine__5855__auto____0.call(this);
-case 1:
-return state_machine__5855__auto____1.call(this,state_18923);
-}
-throw(new Error('Invalid arity: ' + arguments.length));
-};
-state_machine__5855__auto__.cljs$core$IFn$_invoke$arity$0 = state_machine__5855__auto____0;
-state_machine__5855__auto__.cljs$core$IFn$_invoke$arity$1 = state_machine__5855__auto____1;
-return state_machine__5855__auto__;
-})()
-;})(switch__5854__auto__,c__5869__auto__,event_bus))
-})();
-var state__5871__auto__ = (function (){var statearr_18937 = f__5870__auto__.call(null);
-(statearr_18937[cljs.core.async.impl.ioc_helpers.USER_START_IDX] = c__5869__auto__);
-
-return statearr_18937;
-})();
-return cljs.core.async.impl.ioc_helpers.run_state_machine_wrapped.call(null,state__5871__auto__);
-});})(c__5869__auto__,event_bus))
-);
-
-return c__5869__auto__;
-});
-var root_GT___4 = (function (f,value,options,event_bus){
-return om.core.root.call(null,f,value,cljs.core.merge.call(null,options,new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null,"descriptor","descriptor",76122018),om_event_bus.core.make_descriptor.call(null,new cljs.core.PersistentArrayMap(null, 3, [new cljs.core.Keyword(null,"componentWillMount","componentWillMount",-285327619),(function (this$,super$){
-om_event_bus.core.init_event_bus_BANG_.call(null,this$);
+om_event_bus.core.init_event_bus_BANG_.call(null,this$,protocols);
 
 return super$.call(null);
 }),new cljs.core.Keyword(null,"componentWillUnmount","componentWillUnmount",1573788814),(function (this$,super$){
+if(cljs.core.truth_(om_event_bus.core.debug_QMARK_.call(null,this$))){
+cljs.core.println.call(null,om.core.id.call(null,this$),"will-unmount");
+} else {
+}
+
 om_event_bus.core.shutdown_event_bus_BANG_.call(null,this$);
 
 return super$.call(null);
 }),new cljs.core.Keyword(null,"render","render",-1408033454),(function (this$,super$){
-var _STAR_parent_STAR_18938 = om_event_bus.core._STAR_parent_STAR_;
+if(cljs.core.truth_(om_event_bus.core.debug_QMARK_.call(null,this$))){
+cljs.core.println.call(null,om.core.id.call(null,this$),"render");
+} else {
+}
+
+var _STAR_parent_STAR_81590 = om_event_bus.core._STAR_parent_STAR_;
 try{om_event_bus.core._STAR_parent_STAR_ = this$;
 
 return super$.call(null);
-}finally {om_event_bus.core._STAR_parent_STAR_ = _STAR_parent_STAR_18938;
-}})], null)),new cljs.core.Keyword(null,"instrument","instrument",-960698844),(function (f__$1,x,m){
-var parent_bus = (function (){var or__3630__auto__ = (function (){var and__3618__auto__ = om_event_bus.core._STAR_parent_STAR_;
+}finally {om_event_bus.core._STAR_parent_STAR_ = _STAR_parent_STAR_81590;
+}})], null));
+if(cljs.core.truth_(out_event_ch)){
+var temp__4124__auto___81591 = new cljs.core.Keyword("om-event-bus.core","bubbling","om-event-bus.core/bubbling",792096109).cljs$core$IFn$_invoke$arity$1(event_buses);
+if(cljs.core.truth_(temp__4124__auto___81591)){
+var bubbling_bus_81592 = temp__4124__auto___81591;
+om_event_bus.impl.tap.call(null,bubbling_bus_81592,out_event_ch);
+} else {
+throw (new Error("Bubbling event bus not available. Make sure to use root> or root<>."));
+}
+} else {
+}
+
+return om.core.root.call(null,f,value,cljs.core.merge.call(null,options,new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"instrument","instrument",-960698844),((function (descriptor){
+return (function (f__$1,x,m){
+var parent_buses = (function (){var or__3630__auto__ = (function (){var and__3618__auto__ = om_event_bus.core._STAR_parent_STAR_;
 if(cljs.core.truth_(and__3618__auto__)){
-return om.core.get_state.call(null,om_event_bus.core._STAR_parent_STAR_,new cljs.core.Keyword("om-event-bus.core","event-bus","om-event-bus.core/event-bus",1537869742));
+return om.core.get_state.call(null,om_event_bus.core._STAR_parent_STAR_,new cljs.core.Keyword("om-event-bus.core","event-buses","om-event-bus.core/event-buses",595975774));
 } else {
 return and__3618__auto__;
 }
@@ -270,550 +292,473 @@ return and__3618__auto__;
 if(cljs.core.truth_(or__3630__auto__)){
 return or__3630__auto__;
 } else {
-return event_bus;
+return event_buses;
 }
 })();
-return om.core.build_STAR_.call(null,f__$1,x,cljs.core.update_in.call(null,m,new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"init-state","init-state",1450863212)], null),cljs.core.merge,new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword("om-event-bus.core","event-bus","om-event-bus.core/event-bus",1537869742),parent_bus], null)));
-})], null)));
+return om.core.build_STAR_.call(null,f__$1,x,cljs.core.merge.call(null,cljs.core.update_in.call(null,m,new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"init-state","init-state",1450863212)], null),cljs.core.merge,new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword("om-event-bus.core","event-buses","om-event-bus.core/event-buses",595975774),parent_buses], null)),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"descriptor","descriptor",76122018),descriptor], null)));
+});})(descriptor))
+], null)));
 });
-root_GT_ = function(f,value,options,event_bus){
-switch(arguments.length){
-case 3:
-return root_GT___3.call(this,f,value,options);
-case 4:
-return root_GT___4.call(this,f,value,options,event_bus);
-}
-throw(new Error('Invalid arity: ' + arguments.length));
-};
-root_GT_.cljs$core$IFn$_invoke$arity$3 = root_GT___3;
-root_GT_.cljs$core$IFn$_invoke$arity$4 = root_GT___4;
-return root_GT_;
-})()
-;
-/**
-* This function sends an event from the component down through its parent components.
-* 
-* Note that `event` can be any data structure, there are no restrictions in this respect though for future compatibility,
-* a map is recommended.
-*/
-om_event_bus.core.trigger = (function trigger(owner,event){
-var trigger_fn_18947 = om.core.get_state.call(null,owner,new cljs.core.Keyword("om-event-bus.core","trigger-fn","om-event-bus.core/trigger-fn",-739675977));
-trigger_fn_18947.call(null,event);
-
-return null;
-});
-/**
-* This function adds support for triggering events and, if the component reified IGotEvent, support for handling events
-* from child components.
-* 
-* It is called from when a component mounts (see `root>` above).
-* 
-* What it does is it takes the event bus from its parent component (`downstream`) and using `core.async/mult`
-* it taps into it to fork it into two branches: `branch` this component may use to handle events and
-* `upstream` to pass on to child components (see `root>` above).
-* 
-* It does sets the local state:
-* ::trigger-fn  -  function that triggers an event;
-* ::event-bus   -  core.async channel to be passed to the component's children (see `root>` above).
-* 
-* **IMPORTANT:** Do not use the local state values directly; they are for internal use only.
-* 
-* Please note that this mult/tap magic happens only if the component reifies the `IGotEvent` protocol and, to some
-* extend, for `IInitEventBus` protocol as well. For components that don't care about events, overhead is minimal.
-*/
-om_event_bus.core.init_event_bus_BANG_ = (function init_event_bus_BANG_(this$){
-om_event_bus.core.trace.call(null,"Initializing event bus for",om.core.id.call(null,this$));
-
-var downstream = om.core.get_state.call(null,this$,new cljs.core.Keyword("om-event-bus.core","event-bus","om-event-bus.core/event-bus",1537869742));
-var c = om.core.children.call(null,this$);
-var map__19002 = cljs.core.merge.call(null,om_event_bus.core.default_config,(((function (){var G__19003 = c;
-if(G__19003){
+om_event_bus.core.default_protocols = new cljs.core.PersistentArrayMap(null, 3, [new cljs.core.Keyword("om-event-bus.core","all","om-event-bus.core/all",1794150877),(function (p1__81593_SHARP_){
+if((function (){var G__81596 = p1__81593_SHARP_;
+if(G__81596){
 var bit__4311__auto__ = null;
 if(cljs.core.truth_((function (){var or__3630__auto__ = bit__4311__auto__;
 if(cljs.core.truth_(or__3630__auto__)){
 return or__3630__auto__;
 } else {
-return G__19003.om_event_bus$core$IInitEventBus$;
+return G__81596.om_event_bus$core$IGotEvent$;
 }
 })())){
 return true;
 } else {
-if((!G__19003.cljs$lang$protocol_mask$partition$)){
-return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IInitEventBus,G__19003);
+if((!G__81596.cljs$lang$protocol_mask$partition$)){
+return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotEvent,G__81596);
 } else {
 return false;
 }
 }
 } else {
-return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IInitEventBus,G__19003);
+return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotEvent,G__81596);
 }
-})())?(function (){var or__3630__auto__ = om_event_bus.core.init_event_bus.call(null,c);
+})()){
+return om_event_bus.core.got_event;
+} else {
+return null;
+}
+}),new cljs.core.Keyword("om-event-bus.core","bubbling","om-event-bus.core/bubbling",792096109),(function (p1__81594_SHARP_){
+if((function (){var G__81597 = p1__81594_SHARP_;
+if(G__81597){
+var bit__4311__auto__ = null;
+if(cljs.core.truth_((function (){var or__3630__auto__ = bit__4311__auto__;
 if(cljs.core.truth_(or__3630__auto__)){
 return or__3630__auto__;
 } else {
-return cljs.core.PersistentArrayMap.EMPTY;
+return G__81597.om_event_bus$core$IGotBubblingEvent$;
 }
-})():null));
-var map__19002__$1 = ((cljs.core.seq_QMARK_.call(null,map__19002))?cljs.core.apply.call(null,cljs.core.hash_map,map__19002):map__19002);
-var buf_or_n = cljs.core.get.call(null,map__19002__$1,new cljs.core.Keyword(null,"buf-or-n","buf-or-n",1007620719));
-var xform = cljs.core.get.call(null,map__19002__$1,new cljs.core.Keyword(null,"xform","xform",-1725711008));
-om.core.set_state_BANG_.call(null,this$,new cljs.core.Keyword("om-event-bus.core","trigger-fn","om-event-bus.core/trigger-fn",-739675977),((function (downstream,c,map__19002,map__19002__$1,buf_or_n,xform){
+})())){
+return true;
+} else {
+if((!G__81597.cljs$lang$protocol_mask$partition$)){
+return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotBubblingEvent,G__81597);
+} else {
+return false;
+}
+}
+} else {
+return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotBubblingEvent,G__81597);
+}
+})()){
+return om_event_bus.core.got_bubbling_event;
+} else {
+return null;
+}
+}),new cljs.core.Keyword("om-event-bus.core","trickling","om-event-bus.core/trickling",860880220),(function (p1__81595_SHARP_){
+if((function (){var G__81598 = p1__81595_SHARP_;
+if(G__81598){
+var bit__4311__auto__ = null;
+if(cljs.core.truth_((function (){var or__3630__auto__ = bit__4311__auto__;
+if(cljs.core.truth_(or__3630__auto__)){
+return or__3630__auto__;
+} else {
+return G__81598.om_event_bus$core$IGotTricklingEvent$;
+}
+})())){
+return true;
+} else {
+if((!G__81598.cljs$lang$protocol_mask$partition$)){
+return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotTricklingEvent,G__81598);
+} else {
+return false;
+}
+}
+} else {
+return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotTricklingEvent,G__81598);
+}
+})()){
+return om_event_bus.core.got_trickling_event;
+} else {
+return null;
+}
+})], null);
+/**
+* The `init-event-bus!` function adds support for triggering events and, if the component reified any of the supported
+* protocols, the code to handle events.
+* 
+* This function is called from when a component mounts (see `root*`). It sets ::event-buses in the components local
+* state to a map containing one or more event buses.
+*/
+om_event_bus.core.init_event_bus_BANG_ = (function init_event_bus_BANG_(owner,protocols){
+var map__81601 = om_event_bus.core.get_config.call(null,owner);
+var map__81601__$1 = ((cljs.core.seq_QMARK_.call(null,map__81601))?cljs.core.apply.call(null,cljs.core.hash_map,map__81601):map__81601);
+var config = map__81601__$1;
+var debug = cljs.core.get.call(null,map__81601__$1,new cljs.core.Keyword(null,"debug","debug",-1608172596));
+var buf_or_n = cljs.core.get.call(null,map__81601__$1,new cljs.core.Keyword(null,"buf-or-n","buf-or-n",1007620719));
+var xform = cljs.core.get.call(null,map__81601__$1,new cljs.core.Keyword(null,"xform","xform",-1725711008));
+if(cljs.core.truth_(debug)){
+cljs.core.println.call(null,om.core.id.call(null,owner),"init-event-bus!",(cljs.core.truth_(xform)?"+xform":null));
+} else {
+}
+
+var _STAR_options_STAR_81602 = om_event_bus.impl._STAR_options_STAR_;
+try{om_event_bus.impl._STAR_options_STAR_ = cljs.core.merge.call(null,om_event_bus.impl._STAR_options_STAR_,new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null,"buf-or-n","buf-or-n",1007620719),buf_or_n,new cljs.core.Keyword(null,"debug","debug",-1608172596),debug], null));
+
+return om.core.set_state_BANG_.call(null,owner,new cljs.core.Keyword("om-event-bus.core","event-buses","om-event-bus.core/event-buses",595975774),om_event_bus.core.build_buses.call(null,owner,xform,protocols));
+}finally {om_event_bus.impl._STAR_options_STAR_ = _STAR_options_STAR_81602;
+}});
+/**
+* What the `build-buses` function does does is it takes the event bus from its parent component and extends it, either
+* by forking it to handle events or by creating a 'leg' of the bus with minimal overhead if the component reifies none
+* of the compatible event-handling protocols.
+* 
+* To create a handler it composes potential handlers for supported protocols. Both `catch-all-handler` and the result
+* of the application of `find-handler` can return nil but `compose-handlers` will take care of that.
+*/
+om_event_bus.core.build_buses = (function build_buses(owner,xform,protocols){
+var catch_all_handler = om_event_bus.core.find_handler.call(null,owner,new cljs.core.Keyword("om-event-bus.core","all","om-event-bus.core/all",1794150877),protocols);
+var buses = cljs.core.into.call(null,cljs.core.PersistentArrayMap.EMPTY,(function (){var iter__4386__auto__ = ((function (catch_all_handler){
+return (function iter__81611(s__81612){
+return (new cljs.core.LazySeq(null,((function (catch_all_handler){
+return (function (){
+var s__81612__$1 = s__81612;
+while(true){
+var temp__4126__auto__ = cljs.core.seq.call(null,s__81612__$1);
+if(temp__4126__auto__){
+var s__81612__$2 = temp__4126__auto__;
+if(cljs.core.chunked_seq_QMARK_.call(null,s__81612__$2)){
+var c__4384__auto__ = cljs.core.chunk_first.call(null,s__81612__$2);
+var size__4385__auto__ = cljs.core.count.call(null,c__4384__auto__);
+var b__81614 = cljs.core.chunk_buffer.call(null,size__4385__auto__);
+if((function (){var i__81613 = (0);
+while(true){
+if((i__81613 < size__4385__auto__)){
+var vec__81617 = cljs.core._nth.call(null,c__4384__auto__,i__81613);
+var k = cljs.core.nth.call(null,vec__81617,(0),null);
+var bus = cljs.core.nth.call(null,vec__81617,(1),null);
+cljs.core.chunk_append.call(null,b__81614,(function (){var handler = om_event_bus.core.compose_handlers.call(null,catch_all_handler,om_event_bus.core.find_handler.call(null,owner,k,protocols));
+return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [k,(cljs.core.truth_(handler)?(function (){
+if(cljs.core.truth_(om_event_bus.core.debug_QMARK_.call(null,owner))){
+cljs.core.println.call(null,om.core.id.call(null,owner),"adding fork");
+} else {
+}
+
+return om_event_bus.impl.add_fork.call(null,bus,handler,xform);
+})()
+:(function (){
+if(cljs.core.truth_(om_event_bus.core.debug_QMARK_.call(null,owner))){
+cljs.core.println.call(null,om.core.id.call(null,owner),"adding leg");
+} else {
+}
+
+return om_event_bus.impl.add_leg.call(null,bus,xform);
+})()
+)], null);
+})());
+
+var G__81619 = (i__81613 + (1));
+i__81613 = G__81619;
+continue;
+} else {
+return true;
+}
+break;
+}
+})()){
+return cljs.core.chunk_cons.call(null,cljs.core.chunk.call(null,b__81614),iter__81611.call(null,cljs.core.chunk_rest.call(null,s__81612__$2)));
+} else {
+return cljs.core.chunk_cons.call(null,cljs.core.chunk.call(null,b__81614),null);
+}
+} else {
+var vec__81618 = cljs.core.first.call(null,s__81612__$2);
+var k = cljs.core.nth.call(null,vec__81618,(0),null);
+var bus = cljs.core.nth.call(null,vec__81618,(1),null);
+return cljs.core.cons.call(null,(function (){var handler = om_event_bus.core.compose_handlers.call(null,catch_all_handler,om_event_bus.core.find_handler.call(null,owner,k,protocols));
+return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [k,(cljs.core.truth_(handler)?(function (){
+if(cljs.core.truth_(om_event_bus.core.debug_QMARK_.call(null,owner))){
+cljs.core.println.call(null,om.core.id.call(null,owner),"adding fork");
+} else {
+}
+
+return om_event_bus.impl.add_fork.call(null,bus,handler,xform);
+})()
+:(function (){
+if(cljs.core.truth_(om_event_bus.core.debug_QMARK_.call(null,owner))){
+cljs.core.println.call(null,om.core.id.call(null,owner),"adding leg");
+} else {
+}
+
+return om_event_bus.impl.add_leg.call(null,bus,xform);
+})()
+)], null);
+})(),iter__81611.call(null,cljs.core.rest.call(null,s__81612__$2)));
+}
+} else {
+return null;
+}
+break;
+}
+});})(catch_all_handler))
+,null,null));
+});})(catch_all_handler))
+;
+return iter__4386__auto__.call(null,om.core.get_state.call(null,owner,new cljs.core.Keyword("om-event-bus.core","event-buses","om-event-bus.core/event-buses",595975774)));
+})());
+return buses;
+});
+/**
+* The `find-handler` function looks up a protocol builder function in `protocol` using `bus-key` as, well,
+* the key (for instance, `::bubbling`) and, if one is found, binds it to a component resulting in an event handling function.
+* If the protocol isn't implemented by the `component`, the function returns nil.
+*/
+om_event_bus.core.find_handler = (function find_handler(owner,bus_key,protocols){
+var component = om.core.children.call(null,owner);
+var temp__4126__auto__ = bus_key.call(null,protocols).call(null,component);
+if(cljs.core.truth_(temp__4126__auto__)){
+var handler_fn = temp__4126__auto__;
+if(cljs.core.not.call(null,om_event_bus.core.debug_QMARK_.call(null,owner))){
+return cljs.core.partial.call(null,handler_fn,component);
+} else {
+return ((function (handler_fn,temp__4126__auto__,component){
 return (function (event){
-return cljs.core.async.put_BANG_.call(null,downstream,om_event_bus.core.maybe_apply_xform.call(null,xform,event));
-});})(downstream,c,map__19002,map__19002__$1,buf_or_n,xform))
-);
-
-if(cljs.core.truth_((function (){var or__3630__auto__ = (function (){var G__19005 = c;
-if(G__19005){
-var bit__4311__auto__ = null;
-if(cljs.core.truth_((function (){var or__3630__auto__ = bit__4311__auto__;
-if(cljs.core.truth_(or__3630__auto__)){
-return or__3630__auto__;
+var G__81621 = ((((function (){var and__3618__auto__ = cljs.core.map_QMARK_.call(null,event);
+if(and__3618__auto__){
+return new cljs.core.Keyword(null,"event","event",301435442).cljs$core$IFn$_invoke$arity$1(event);
 } else {
-return G__19005.om_event_bus$core$IGotEvent$;
+return and__3618__auto__;
 }
-})())){
-return true;
+})() instanceof cljs.core.Keyword))?(function (){var and__3618__auto__ = cljs.core.map_QMARK_.call(null,event);
+if(and__3618__auto__){
+return new cljs.core.Keyword(null,"event","event",301435442).cljs$core$IFn$_invoke$arity$1(event);
 } else {
-if((!G__19005.cljs$lang$protocol_mask$partition$)){
-return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotEvent,G__19005);
-} else {
-return false;
+return and__3618__auto__;
 }
-}
-} else {
-return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotEvent,G__19005);
-}
-})();
-if(or__3630__auto__){
-return or__3630__auto__;
-} else {
-return xform;
-}
-})())){
-var upstream = cljs.core.async.chan.call(null,buf_or_n,xform);
-var branch = cljs.core.async.chan.call(null,buf_or_n);
-var fork = cljs.core.async.mult.call(null,upstream);
-om.core.set_state_BANG_.call(null,this$,new cljs.core.Keyword("om-event-bus.core","close-fn","om-event-bus.core/close-fn",-75492433),((function (upstream,branch,fork,downstream,c,map__19002,map__19002__$1,buf_or_n,xform){
-return (function (){
-cljs.core.async.untap_all.call(null,fork);
+})().fqn:null);
+switch (G__81621) {
+case "om-event-bus.impl/dead":
+return cljs.core.println.call(null,om.core.id.call(null,owner),"Event-handling go loop has just died.");
 
-cljs.core.async.close_BANG_.call(null,upstream);
-
-return cljs.core.async.close_BANG_.call(null,branch);
-});})(upstream,branch,fork,downstream,c,map__19002,map__19002__$1,buf_or_n,xform))
-);
-
-om.core.set_state_BANG_.call(null,this$,new cljs.core.Keyword("om-event-bus.core","event-bus","om-event-bus.core/event-bus",1537869742),upstream);
-
-cljs.core.async.tap.call(null,fork,downstream);
-
-if((function (){var G__19006 = c;
-if(G__19006){
-var bit__4311__auto__ = null;
-if(cljs.core.truth_((function (){var or__3630__auto__ = bit__4311__auto__;
-if(cljs.core.truth_(or__3630__auto__)){
-return or__3630__auto__;
-} else {
-return G__19006.om_event_bus$core$IGotEvent$;
-}
-})())){
-return true;
-} else {
-if((!G__19006.cljs$lang$protocol_mask$partition$)){
-return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotEvent,G__19006);
-} else {
-return false;
-}
-}
-} else {
-return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotEvent,G__19006);
-}
-})()){
-cljs.core.async.tap.call(null,fork,branch);
-
-var c__5869__auto__ = cljs.core.async.chan.call(null,(1));
-cljs.core.async.impl.dispatch.run.call(null,((function (c__5869__auto__,upstream,branch,fork,downstream,c,map__19002,map__19002__$1,buf_or_n,xform){
-return (function (){
-var f__5870__auto__ = (function (){var switch__5854__auto__ = ((function (c__5869__auto__,upstream,branch,fork,downstream,c,map__19002,map__19002__$1,buf_or_n,xform){
-return (function (state_19034){
-var state_val_19035 = (state_19034[(1)]);
-if((state_val_19035 === (7))){
-var inst_19030 = (state_19034[(2)]);
-var state_19034__$1 = state_19034;
-var statearr_19036_19056 = state_19034__$1;
-(statearr_19036_19056[(2)] = inst_19030);
-
-(statearr_19036_19056[(1)] = (3));
-
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-if((state_val_19035 === (1))){
-var state_19034__$1 = state_19034;
-var statearr_19037_19057 = state_19034__$1;
-(statearr_19037_19057[(2)] = null);
-
-(statearr_19037_19057[(1)] = (2));
-
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-if((state_val_19035 === (4))){
-var inst_19015 = (state_19034[(7)]);
-var inst_19014 = (state_19034[(2)]);
-var inst_19015__$1 = cljs.core.nth.call(null,inst_19014,(0),null);
-var inst_19016 = cljs.core.nth.call(null,inst_19014,(1),null);
-var state_19034__$1 = (function (){var statearr_19038 = state_19034;
-(statearr_19038[(8)] = inst_19016);
-
-(statearr_19038[(7)] = inst_19015__$1);
-
-return statearr_19038;
-})();
-if(cljs.core.truth_(inst_19015__$1)){
-var statearr_19039_19058 = state_19034__$1;
-(statearr_19039_19058[(1)] = (5));
-
-} else {
-var statearr_19040_19059 = state_19034__$1;
-(statearr_19040_19059[(1)] = (6));
-
-}
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-if((state_val_19035 === (6))){
-var inst_19016 = (state_19034[(8)]);
-var inst_19021 = cljs.core.not_EQ_.call(null,inst_19016,branch);
-var state_19034__$1 = state_19034;
-if(inst_19021){
-var statearr_19041_19060 = state_19034__$1;
-(statearr_19041_19060[(1)] = (8));
-
-} else {
-var statearr_19042_19061 = state_19034__$1;
-(statearr_19042_19061[(1)] = (9));
-
-}
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-if((state_val_19035 === (3))){
-var inst_19032 = (state_19034[(2)]);
-var state_19034__$1 = state_19034;
-return cljs.core.async.impl.ioc_helpers.return_chan.call(null,state_19034__$1,inst_19032);
-} else {
-if((state_val_19035 === (2))){
-var inst_19009 = cljs.core.PersistentVector.EMPTY_NODE;
-var inst_19010 = cljs.core.async.timeout.call(null,(5000));
-var inst_19011 = [branch,inst_19010];
-var inst_19012 = (new cljs.core.PersistentVector(null,2,(5),inst_19009,inst_19011,null));
-var state_19034__$1 = state_19034;
-return cljs.core.async.ioc_alts_BANG_.call(null,state_19034__$1,(4),inst_19012);
-} else {
-if((state_val_19035 === (9))){
-var state_19034__$1 = state_19034;
-var statearr_19043_19062 = state_19034__$1;
-(statearr_19043_19062[(2)] = null);
-
-(statearr_19043_19062[(1)] = (10));
-
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-if((state_val_19035 === (5))){
-var inst_19015 = (state_19034[(7)]);
-var inst_19018 = om_event_bus.core.got_event.call(null,c,inst_19015);
-var state_19034__$1 = (function (){var statearr_19044 = state_19034;
-(statearr_19044[(9)] = inst_19018);
-
-return statearr_19044;
-})();
-var statearr_19045_19063 = state_19034__$1;
-(statearr_19045_19063[(2)] = null);
-
-(statearr_19045_19063[(1)] = (2));
-
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-if((state_val_19035 === (10))){
-var inst_19028 = (state_19034[(2)]);
-var state_19034__$1 = state_19034;
-var statearr_19046_19064 = state_19034__$1;
-(statearr_19046_19064[(2)] = inst_19028);
-
-(statearr_19046_19064[(1)] = (7));
-
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-if((state_val_19035 === (8))){
-var inst_19023 = om.core.id.call(null,this$);
-var inst_19024 = om_event_bus.core.trace.call(null,inst_19023,"is listening...");
-var state_19034__$1 = (function (){var statearr_19047 = state_19034;
-(statearr_19047[(10)] = inst_19024);
-
-return statearr_19047;
-})();
-var statearr_19048_19065 = state_19034__$1;
-(statearr_19048_19065[(2)] = null);
-
-(statearr_19048_19065[(1)] = (2));
-
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-return null;
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-});})(c__5869__auto__,upstream,branch,fork,downstream,c,map__19002,map__19002__$1,buf_or_n,xform))
-;
-return ((function (switch__5854__auto__,c__5869__auto__,upstream,branch,fork,downstream,c,map__19002,map__19002__$1,buf_or_n,xform){
-return (function() {
-var state_machine__5855__auto__ = null;
-var state_machine__5855__auto____0 = (function (){
-var statearr_19052 = [null,null,null,null,null,null,null,null,null,null,null];
-(statearr_19052[(0)] = state_machine__5855__auto__);
-
-(statearr_19052[(1)] = (1));
-
-return statearr_19052;
-});
-var state_machine__5855__auto____1 = (function (state_19034){
-while(true){
-var ret_value__5856__auto__ = (function (){try{while(true){
-var result__5857__auto__ = switch__5854__auto__.call(null,state_19034);
-if(cljs.core.keyword_identical_QMARK_.call(null,result__5857__auto__,new cljs.core.Keyword(null,"recur","recur",-437573268))){
-continue;
-} else {
-return result__5857__auto__;
-}
 break;
-}
-}catch (e19053){if((e19053 instanceof Object)){
-var ex__5858__auto__ = e19053;
-var statearr_19054_19066 = state_19034;
-(statearr_19054_19066[(5)] = ex__5858__auto__);
+case "om-event-bus.impl/alive":
+return cljs.core.println.call(null,om.core.id.call(null,owner),"Event-handling go loop is running.");
 
-
-cljs.core.async.impl.ioc_helpers.process_exception.call(null,state_19034);
-
-return new cljs.core.Keyword(null,"recur","recur",-437573268);
-} else {
-throw e19053;
-
-}
-}})();
-if(cljs.core.keyword_identical_QMARK_.call(null,ret_value__5856__auto__,new cljs.core.Keyword(null,"recur","recur",-437573268))){
-var G__19067 = state_19034;
-state_19034 = G__19067;
-continue;
-} else {
-return ret_value__5856__auto__;
-}
 break;
+default:
+cljs.core.println.call(null,cljs.core.map_QMARK_.call(null,event),new cljs.core.Keyword(null,"event","event",301435442).cljs$core$IFn$_invoke$arity$1(event));
+
+cljs.core.println.call(null,om.core.id.call(null,owner),"received",event);
+
+return handler_fn.call(null,component,event);
+
 }
 });
-state_machine__5855__auto__ = function(state_19034){
-switch(arguments.length){
-case 0:
-return state_machine__5855__auto____0.call(this);
-case 1:
-return state_machine__5855__auto____1.call(this,state_19034);
-}
-throw(new Error('Invalid arity: ' + arguments.length));
-};
-state_machine__5855__auto__.cljs$core$IFn$_invoke$arity$0 = state_machine__5855__auto____0;
-state_machine__5855__auto__.cljs$core$IFn$_invoke$arity$1 = state_machine__5855__auto____1;
-return state_machine__5855__auto__;
-})()
-;})(switch__5854__auto__,c__5869__auto__,upstream,branch,fork,downstream,c,map__19002,map__19002__$1,buf_or_n,xform))
-})();
-var state__5871__auto__ = (function (){var statearr_19055 = f__5870__auto__.call(null);
-(statearr_19055[cljs.core.async.impl.ioc_helpers.USER_START_IDX] = c__5869__auto__);
-
-return statearr_19055;
-})();
-return cljs.core.async.impl.ioc_helpers.run_state_machine_wrapped.call(null,state__5871__auto__);
-});})(c__5869__auto__,upstream,branch,fork,downstream,c,map__19002,map__19002__$1,buf_or_n,xform))
-);
-
-return c__5869__auto__;
-} else {
-return null;
+;})(handler_fn,temp__4126__auto__,component))
 }
 } else {
 return null;
 }
 });
 /**
-* This function mainly shuts down event bus channels for this component.
-* It simply calls `::close-fn` set up in `init-event-bus!` above. This also terminates `go-loop` handling events.
-*/
-om_event_bus.core.shutdown_event_bus_BANG_ = (function shutdown_event_bus_BANG_(this$){
-om.core.set_state_BANG_.call(null,this$,new cljs.core.Keyword("om-event-bus.core","trigger-fn","om-event-bus.core/trigger-fn",-739675977),(function (){
-throw (new Error("Event bus has already been shut down."));
-}));
-
-var c = om.core.children.call(null,this$);
-var close_fn = om.core.get_state.call(null,this$,new cljs.core.Keyword("om-event-bus.core","close-fn","om-event-bus.core/close-fn",-75492433));
-if((function (){var G__19069 = c;
-if(G__19069){
-var bit__4311__auto__ = null;
-if(cljs.core.truth_((function (){var or__3630__auto__ = bit__4311__auto__;
-if(cljs.core.truth_(or__3630__auto__)){
-return or__3630__auto__;
-} else {
-return G__19069.om_event_bus$core$IGotEvent$;
-}
-})())){
-return true;
-} else {
-if((!G__19069.cljs$lang$protocol_mask$partition$)){
-return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotEvent,G__19069);
-} else {
-return false;
-}
-}
-} else {
-return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IGotEvent,G__19069);
-}
-})()){
-om_event_bus.core.trace.call(null,"Shutting down event bus for",om.core.id.call(null,this$));
-
-return close_fn.call(null);
-} else {
-return null;
-}
-});
-/**
-* For an xform it returns the result of applying xform to an event.
-* If xform is nil it returns unmodified event.
-*/
-om_event_bus.core.maybe_apply_xform = (function maybe_apply_xform(xform,event){
-if(cljs.core.truth_(xform)){
-return cljs.core.first.call(null,cljs.core.reduce.call(null,xform.call(null,cljs.core.conj),cljs.core.PersistentVector.EMPTY,new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [event], null)));
-} else {
-return event;
-}
-});
-/**
-* Overrides a pure method by wrapping it in f.
-*/
-om_event_bus.core.around_method = (function around_method(method,methods$,f){
-var prev_method = method.call(null,methods$);
-return cljs.core.assoc.call(null,methods$,method,((function (prev_method){
-return (function (){
-var this$ = this;
-return f.call(null,this$,((function (this$,prev_method){
-return (function (){
-return prev_method.call(this$);
-});})(this$,prev_method))
-);
-});})(prev_method))
-);
-});
-/**
-* Given pure methods and a map of overrides, it extends pure methods with new lifecycle methods.
+* To handle possible non-existent handlers (a.k.a. nils) this function returns either:
 * 
-* Example:
-* 
-* <pre><code>
-* (extend-pure-methods
-* {:render (fn [this super]
-* ;; Do something.
-* (super))}) ;; Call the original method.
-* </pre></code>
-* 
-* You can also specify a map of pure methods as the first argument.
-*/
-om_event_bus.core.extend_pure_methods = (function() {
-var extend_pure_methods = null;
-var extend_pure_methods__1 = (function (new_methods){
-return extend_pure_methods.call(null,om.core.pure_methods,new_methods);
-});
-var extend_pure_methods__2 = (function (methods$,new_methods){
-var methods_SINGLEQUOTE_ = methods$;
-var G__19079 = cljs.core.seq.call(null,new_methods);
-var vec__19080 = G__19079;
-var vec__19081 = cljs.core.nth.call(null,vec__19080,(0),null);
-var new_method_name = cljs.core.nth.call(null,vec__19081,(0),null);
-var new_method_fn = cljs.core.nth.call(null,vec__19081,(1),null);
-var new_methods_SINGLEQUOTE_ = cljs.core.nthnext.call(null,vec__19080,(1));
-var methods_SINGLEQUOTE___$1 = methods_SINGLEQUOTE_;
-var G__19079__$1 = G__19079;
-while(true){
-var methods_SINGLEQUOTE___$2 = methods_SINGLEQUOTE___$1;
-var vec__19082 = G__19079__$1;
-var vec__19083 = cljs.core.nth.call(null,vec__19082,(0),null);
-var new_method_name__$1 = cljs.core.nth.call(null,vec__19083,(0),null);
-var new_method_fn__$1 = cljs.core.nth.call(null,vec__19083,(1),null);
-var new_methods_SINGLEQUOTE___$1 = cljs.core.nthnext.call(null,vec__19082,(1));
-if(cljs.core.truth_(new_method_name__$1)){
-var G__19084 = om_event_bus.core.around_method.call(null,new_method_name__$1,methods_SINGLEQUOTE___$2,new_method_fn__$1);
-var G__19085 = new_methods_SINGLEQUOTE___$1;
-methods_SINGLEQUOTE___$1 = G__19084;
-G__19079__$1 = G__19085;
-continue;
-} else {
-return methods_SINGLEQUOTE___$2;
-}
-break;
-}
-});
-extend_pure_methods = function(methods$,new_methods){
-switch(arguments.length){
-case 1:
-return extend_pure_methods__1.call(this,methods$);
-case 2:
-return extend_pure_methods__2.call(this,methods$,new_methods);
-}
-throw(new Error('Invalid arity: ' + arguments.length));
-};
-extend_pure_methods.cljs$core$IFn$_invoke$arity$1 = extend_pure_methods__1;
-extend_pure_methods.cljs$core$IFn$_invoke$arity$2 = extend_pure_methods__2;
-return extend_pure_methods;
-})()
-;
-/**
-* Creates a custom descriptor with support for an event bus.
-*/
-om_event_bus.core.make_descriptor = (function make_descriptor(new_methods){
-var methods$ = om_event_bus.core.extend_pure_methods.call(null,new_methods);
-var descriptor = om.core.specify_state_methods_BANG_.call(null,cljs.core.clj__GT_js.call(null,methods$));
-return descriptor;
-});
-/**
+* - an event handler calling one of more event-handing functions in `handlers` if any of the handlers is not `nil`, or
+* - nil (if all `handlers` are `nil`).
 * @param {...*} var_args
 */
-om_event_bus.core.trace = (function() { 
-var trace__delegate = function (args){
+om_event_bus.core.compose_handlers = (function() { 
+var compose_handlers__delegate = function (handlers){
+var temp__4126__auto__ = cljs.core.not_empty.call(null,cljs.core.remove.call(null,cljs.core.nil_QMARK_,handlers));
+if(cljs.core.truth_(temp__4126__auto__)){
+var funs = temp__4126__auto__;
+return ((function (funs,temp__4126__auto__){
+return (function (event){
+var seq__81627 = cljs.core.seq.call(null,funs);
+var chunk__81628 = null;
+var count__81629 = (0);
+var i__81630 = (0);
+while(true){
+if((i__81630 < count__81629)){
+var f = cljs.core._nth.call(null,chunk__81628,i__81630);
+f.call(null,event);
+
+var G__81631 = seq__81627;
+var G__81632 = chunk__81628;
+var G__81633 = count__81629;
+var G__81634 = (i__81630 + (1));
+seq__81627 = G__81631;
+chunk__81628 = G__81632;
+count__81629 = G__81633;
+i__81630 = G__81634;
+continue;
+} else {
+var temp__4126__auto____$1 = cljs.core.seq.call(null,seq__81627);
+if(temp__4126__auto____$1){
+var seq__81627__$1 = temp__4126__auto____$1;
+if(cljs.core.chunked_seq_QMARK_.call(null,seq__81627__$1)){
+var c__4417__auto__ = cljs.core.chunk_first.call(null,seq__81627__$1);
+var G__81635 = cljs.core.chunk_rest.call(null,seq__81627__$1);
+var G__81636 = c__4417__auto__;
+var G__81637 = cljs.core.count.call(null,c__4417__auto__);
+var G__81638 = (0);
+seq__81627 = G__81635;
+chunk__81628 = G__81636;
+count__81629 = G__81637;
+i__81630 = G__81638;
+continue;
+} else {
+var f = cljs.core.first.call(null,seq__81627__$1);
+f.call(null,event);
+
+var G__81639 = cljs.core.next.call(null,seq__81627__$1);
+var G__81640 = null;
+var G__81641 = (0);
+var G__81642 = (0);
+seq__81627 = G__81639;
+chunk__81628 = G__81640;
+count__81629 = G__81641;
+i__81630 = G__81642;
+continue;
+}
+} else {
 return null;
-};
-var trace = function (var_args){
-var args = null;
-if (arguments.length > 0) {
-  args = cljs.core.array_seq(Array.prototype.slice.call(arguments, 0),0);
-} 
-return trace__delegate.call(this,args);};
-trace.cljs$lang$maxFixedArity = 0;
-trace.cljs$lang$applyTo = (function (arglist__19086){
-var args = cljs.core.seq(arglist__19086);
-return trace__delegate(args);
+}
+}
+break;
+}
 });
-trace.cljs$core$IFn$_invoke$arity$variadic = trace__delegate;
-return trace;
+;})(funs,temp__4126__auto__))
+} else {
+return null;
+}
+};
+var compose_handlers = function (var_args){
+var handlers = null;
+if (arguments.length > 0) {
+  handlers = cljs.core.array_seq(Array.prototype.slice.call(arguments, 0),0);
+} 
+return compose_handlers__delegate.call(this,handlers);};
+compose_handlers.cljs$lang$maxFixedArity = 0;
+compose_handlers.cljs$lang$applyTo = (function (arglist__81643){
+var handlers = cljs.core.seq(arglist__81643);
+return compose_handlers__delegate(handlers);
+});
+compose_handlers.cljs$core$IFn$_invoke$arity$variadic = compose_handlers__delegate;
+return compose_handlers;
 })()
 ;
+/**
+* This function shuts down event bus for the component. It simply calls `shutdown` on the event bus set up in
+* `init-event-bus!` above.
+*/
+om_event_bus.core.shutdown_event_bus_BANG_ = (function shutdown_event_bus_BANG_(owner){
+if(cljs.core.truth_(om_event_bus.core.debug_QMARK_.call(null,owner))){
+cljs.core.println.call(null,om.core.id.call(null,owner),"shutdown-event-bus!");
+} else {
+}
+
+var seq__81650_81656 = cljs.core.seq.call(null,om.core.get_state.call(null,owner,new cljs.core.Keyword("om-event-bus.core","event-buses","om-event-bus.core/event-buses",595975774)));
+var chunk__81651_81657 = null;
+var count__81652_81658 = (0);
+var i__81653_81659 = (0);
+while(true){
+if((i__81653_81659 < count__81652_81658)){
+var vec__81654_81660 = cljs.core._nth.call(null,chunk__81651_81657,i__81653_81659);
+var __81661 = cljs.core.nth.call(null,vec__81654_81660,(0),null);
+var bus_81662 = cljs.core.nth.call(null,vec__81654_81660,(1),null);
+om_event_bus.impl.shutdown.call(null,bus_81662);
+
+var G__81663 = seq__81650_81656;
+var G__81664 = chunk__81651_81657;
+var G__81665 = count__81652_81658;
+var G__81666 = (i__81653_81659 + (1));
+seq__81650_81656 = G__81663;
+chunk__81651_81657 = G__81664;
+count__81652_81658 = G__81665;
+i__81653_81659 = G__81666;
+continue;
+} else {
+var temp__4126__auto___81667 = cljs.core.seq.call(null,seq__81650_81656);
+if(temp__4126__auto___81667){
+var seq__81650_81668__$1 = temp__4126__auto___81667;
+if(cljs.core.chunked_seq_QMARK_.call(null,seq__81650_81668__$1)){
+var c__4417__auto___81669 = cljs.core.chunk_first.call(null,seq__81650_81668__$1);
+var G__81670 = cljs.core.chunk_rest.call(null,seq__81650_81668__$1);
+var G__81671 = c__4417__auto___81669;
+var G__81672 = cljs.core.count.call(null,c__4417__auto___81669);
+var G__81673 = (0);
+seq__81650_81656 = G__81670;
+chunk__81651_81657 = G__81671;
+count__81652_81658 = G__81672;
+i__81653_81659 = G__81673;
+continue;
+} else {
+var vec__81655_81674 = cljs.core.first.call(null,seq__81650_81668__$1);
+var __81675 = cljs.core.nth.call(null,vec__81655_81674,(0),null);
+var bus_81676 = cljs.core.nth.call(null,vec__81655_81674,(1),null);
+om_event_bus.impl.shutdown.call(null,bus_81676);
+
+var G__81677 = cljs.core.next.call(null,seq__81650_81668__$1);
+var G__81678 = null;
+var G__81679 = (0);
+var G__81680 = (0);
+seq__81650_81656 = G__81677;
+chunk__81651_81657 = G__81678;
+count__81652_81658 = G__81679;
+i__81653_81659 = G__81680;
+continue;
+}
+} else {
+}
+}
+break;
+}
+
+return om.core.set_state_BANG_.call(null,owner,new cljs.core.Keyword("om-event-bus.core","event-buses","om-event-bus.core/event-buses",595975774),null);
+});
+/**
+* The `trigger*` function triggers an `event` for a specific component (`owner`) and a bus identified by `event-bus-key`
+* (e.g. ::bubbling).
+* 
+* It simply looks up the event bus in ::event-buses local state and uses it to trigger an event.
+*/
+om_event_bus.core.trigger_STAR_ = (function trigger_STAR_(owner,event_bus_key,event){
+var event_bus_81681 = event_bus_key.call(null,om.core.get_state.call(null,owner,new cljs.core.Keyword("om-event-bus.core","event-buses","om-event-bus.core/event-buses",595975774)));
+om_event_bus.impl.trigger.call(null,event_bus_81681,event);
+
+return null;
+});
+/**
+* This function, `get-config` returns the component's event bus config. See `IInitEventBus`.
+*/
+om_event_bus.core.get_config = (function get_config(owner){
+var c = om.core.children.call(null,owner);
+return cljs.core.merge.call(null,om_event_bus.core.default_config,(((function (){var G__81683 = c;
+if(G__81683){
+var bit__4311__auto__ = null;
+if(cljs.core.truth_((function (){var or__3630__auto__ = bit__4311__auto__;
+if(cljs.core.truth_(or__3630__auto__)){
+return or__3630__auto__;
+} else {
+return G__81683.om_event_bus$core$IInitEventBus$;
+}
+})())){
+return true;
+} else {
+if((!G__81683.cljs$lang$protocol_mask$partition$)){
+return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IInitEventBus,G__81683);
+} else {
+return false;
+}
+}
+} else {
+return cljs.core.native_satisfies_QMARK_.call(null,om_event_bus.core.IInitEventBus,G__81683);
+}
+})())?om_event_bus.core.init_event_bus.call(null,c):null));
+});
+/**
+* The `debug` returns true if event bus debugging is turned on for the component.
+*/
+om_event_bus.core.debug_QMARK_ = (function debug_QMARK_(owner){
+return cljs.core.some_QMARK_.call(null,new cljs.core.Keyword(null,"debug","debug",-1608172596).cljs$core$IFn$_invoke$arity$1(om_event_bus.core.get_config.call(null,owner)));
+});
 
 //# sourceMappingURL=core.js.map

@@ -1,34 +1,171 @@
 ;; # Introduction
-;; Use this library whenever you need your Om components to communicate with their parent components.
+;; Use this library whenever you need Om components to send events either down to components nested within them or up to their parents.
 ;;
-;; There are three key things you need to learn about in order to start using this library in your Om project: protocols,
-;; core.om/root replacement and the trigger function.
+;; Let's say you have three om components nested inside each other:
 ;;
-;; Start by requiring `om-event-bus-core` in your module's ns declaration.
+;; ![Three nested components](event_bus_1.png)
+;;
+;; When a component triggers an event, it can send it in two possible directions:
+;;
+;; - it can **bubble** it to its parents all the way to the top, or
+;; - it can **trickle** an event to its children.
+;;
+;; In om-event-bus each direction is handled by a separate event bus. Components connect to an event bus to handle events passing through it.
+;;
+;; ![Bubbling vs. trickling](event_bus_2.png)
 ;;
 (ns om-event-bus.core
   (:require [om.core :as om :include-macros true]
-            [cljs.core.async :as async])
-  (:require-macros [cljs.core.async.macros :as async]))
-
-(declare make-descriptor init-event-bus! shutdown-event-bus! trace)
+            [cljs.core.async :as async]
+            [om-event-bus.impl :as impl]
+            [om-event-bus.descriptor :as d])
+  (:require-macros [cljs.core.async.macros :as async]
+                   [om-event-bus.impl :as impl]))
 
 ; =============================================================================
-;; ### Protocols
+
+(declare init-event-bus! shutdown-event-bus! trace root* default-protocols)
+(def ^:dynamic ^:private *parent* nil)
+
+;; ### Replacements for om.core/root
+
+;; First, we need a replacement for om.core/root that will inject event buses into every component created by our app.
+;;
+;; There are three versions of the replacement. Let's start with one that adds most functionality.
+
+(defn root<>
+  "The `root<>` function adds support both for bubbling (child to parents) and trickling (parent to children) events.
+
+  > **Note**
+  >
+  > The arity 4 version lets you specify a channel if you also want to handle events outside of component hierarchy.
+  > If you pass a channel to receive events through, you **MUST** consume events.
+  >
+  > See [this example](https://github.com/bilus/om-event-bus/blob/master/examples/go_loop/src/core.cljs) ([demo](http://bilus.github.io/om-event-bus/examples/go_loop/index.html))."
+  ([f value options & [out-event-ch]]
+    (root* f
+           value
+           options
+           out-event-ch
+           {::bubbling (impl/event-bus (impl/bubbling-router))
+            ::trickling (impl/event-bus (impl/trickling-router))}
+           default-protocols)))
+
+;; The other two versions each create a single bus for one direction only, either bubbling or trickling.
+
+(defn root>
+  "Use `root>` instead of om.core/root to add support for sending events from child components to parent components only (bubbling).
+
+  > **Note**
+  >
+  > Similarly too `root<>`, the arity 4 version lets you specify a channel if you also want to handle events outside of
+  > component hierarchy and if you pass the channel you **MUST** consume events."
+  ([f value options]
+    (root> f value options nil))
+  ([f value options out-event-ch]
+    (root* f
+           value
+           options
+           out-event-ch
+           {::bubbling (impl/event-bus (impl/bubbling-router))}
+           default-protocols)))
+
+(defn root<
+  "Use `root<` instead of om.core/root to add support for sending events from parent components to child components only (trickling)."
+  ([f value options]
+    (root* f
+           value
+           options
+           nil
+           {::trickling (impl/event-bus (impl/trickling-router))}
+           default-protocols)))
+
+;; Use these functions anywhere you would normally use om.core/root. Example:
+;;
+;; <pre><code>(**event-bus/root<>**
+;;              (fn [app owner]
+;;                (reify om/IRender
+;;                  (render [_]
+;;                    (dom/h1 nil (:text app)))))
+;;              app-state
+;;              {:target (. js/document (getElementById \"app\"))})
+;;
+
+; =============================================================================
+(declare trigger*)
+
+;; ### Triggering events.
+
+;; To trigger an event simply call one of the functions below, passing `owner` and any data as `event` (a map is probably
+;; the best choice but is not required).
+
+;; There are two functions to either bubble or trickle events.
+
+(defn bubble
+  "The `bubble` function sends an event from `owner` up to its parents."
+  [owner event]
+  (trigger* owner ::bubbling event))
+
+(defn trickle
+  [owner event]
+  (trigger* owner ::trickling event))
+
+;; Let's also define a function that sends in the default direction (depends on one's taste but I've chosen sending
+;; from children to parents as the default.)
+
+(defn trigger
+  "The `trigger` function simply bubbles an event."
+  [owner event]
+  (bubble owner event))
+
+;; Here's an example usage:
+;;
+;; <pre><code>(defn child-view
+;;              [app owner]
+;;              (reify
+;;                om/IRender
+;;                (render [_]
+;;                  (dom/div nil (dom/button
+;;                                 #js {:onClick #(**event-bus/bubble** owner \"Hi there!\")}
+;;                                 \"Click me!\")))))
+;; </pre></code>
+
+; =============================================================================
+;; ### Handling events.
 
 (defprotocol IGotEvent
-  "* Event handling protocol.
-  Use it in your components if you're interested in handling events from children."
+  "Reify `IGotEvent` in components that are interested in both bubbling and trickling events.
+
+  Example:
+  <pre><code>(defn parent-view
+      [app owner]
+      (reify
+        **event-bus/IGotEvent**
+        (**got-event [_ event]**
+          ... do something about the event ...)
+        om/IRender
+        ...
+  </pre></code>"
   (got-event [_ event]))
 
+(defprotocol IGotBubblingEvent
+  "The `IGotBubblingEvent`, when reified in a component, will handle bubbling events."
+  (got-bubbling-event [_ event]))
+
+(defprotocol IGotTricklingEvent
+  "This protocol, `IGotTricklingEvent` should be reified to handle trickling events."
+  (got-trickling-event [_ event]))
+
+;; There's one more protocol useful when you want to define a function transforming events that pass a particular
+;; component (via xforms) or to configure the event bus.
+
 (defprotocol IInitEventBus
-  "* (Advanced) Configuration protocol.
-  Use it in your component to override event bus options. Return an option hash to be merged into `default-config`."
+  "Use `IInitEventBus` to override event bus options. Return an option hash to be merged into `default-config`."
   (init-event-bus [_]))
 
 ;; Here are the configuration options you can use along with their default values:
 ;;
-;; * `:xform` - this optional xform will be applied to all events sent downstream, e.g.
+;; * `:xform` - this optional xform will be applied to all passing through the component, e.g.
 ;; <pre><code> (map (fn [event]
 ;;        (merge event {:extra-info "abc"})))
 ;; </pre></code>
@@ -37,191 +174,183 @@
 (def default-config {:xform    nil
                      :buf-or-n 1})
 
-; =============================================================================
-;; ### Replacement for om.core/root
-
-(def ^:dynamic ^:private *parent* nil)
-
-(defn root>
-  "Use `root>` instead of om.core/root to add support for event bus functionality to all components.
-
-  The arity 4 version lets you specify the channel if you also want to handle events outside of component hierarchy.
-
-  **IMPORTANT:** If you pass your own event bus channel, you **MUST** consume events.
-
-  What the `root>` function does is in the essence two things:
-
-  1. It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
-  and tear down the event bus for a component and to bind `*parent*` to be used in the `:instrument` function.
-
-  2. It intercepts calls to build (via `:instrument`) to pass on event bus channels from parent components to their
-  children (via local state)."
-  ([f value options]
-    (let [event-bus (async/chan 1)]
-      (root> f value options event-bus)
-      ;; Consume events to make sure async/mult delivers to all taps.
-      (async/go-loop []
-                     (let [x (<! event-bus)]
-                       (when x (recur))))))
-  ([f value options event-bus]
-    (om/root f value
-             (merge options {:descriptor (make-descriptor {:componentWillMount
-                                                           (fn [this super]
-                                                             (init-event-bus! this)
-                                                             (super))
-                                                           :componentWillUnmount
-                                                           (fn [this super]
-                                                             (shutdown-event-bus! this)
-                                                             (super))
-                                                           :render
-                                                           (fn [this super]
-                                                             (binding [*parent* this]
-                                                               (super)))})
-                             :instrument (fn [f x m]
-                                           (let [parent-bus (or
-                                                              (and *parent* (om/get-state *parent* ::event-bus))
-                                                              event-bus)]
-                                             (om/build* f x (update-in m [:init-state] merge {::event-bus parent-bus}))))}))))
-
-; =============================================================================
-;; ### Triggering events.
-
-(defn trigger
-  "This function sends an event from the component down through its parent components.
-
-  Note that `event` can be any data structure, there are no restrictions in this respect though for future compatibility,
-  a map is recommended."
-  [owner event]
-  (let [trigger-fn (om/get-state owner ::trigger-fn)]
-    (trigger-fn event))
-  nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
-        ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
-        ; as appropriate."
-
 ;; This is everything you should need to use the library but you are welcome to the internals as well. :)
 
 ;; ### Looking for feedback
 ;; Please make sure to send your critique to [gyamtso@gmail.com](mailto:gyamtso@gmail.com) or tweet me **@martinbilski**.
 
-
-(declare maybe-apply-xform)
-
 ; =============================================================================
+
+(declare get-config debug? build-buses find-handler compose-handlers)
+
 ;; # Internals
 
-;; ### Event bus setup
+;; ### Implementation of om/root replacements.
+
+(defn root*
+  "Here's what the `root*` function does:
+
+  1. It intercepts calls to build (via `:instrument`) to pass on event buses from parent components to their
+  children (via local state).
+
+  2. It creates a custom descriptor to add functionality on top of the existing React.js lifecycle methods to set up
+  and tear down the event bus for a component and to bind `*parent*` to be used in the `:instrument` function.
+
+  3. It passes the custom descriptor to `om.core/build*`."
+  [f value options out-event-ch event-buses protocols]
+  (let [descriptor (d/make-descriptor {:componentWillMount
+                                       (fn [this super]
+                                         (when (debug? this)
+                                           (println (om/id this) "will-mount"))
+                                         (init-event-bus! this protocols)
+                                         (super))
+                                       :componentWillUnmount
+                                       (fn [this super]
+                                         (when (debug? this)
+                                           (println (om/id this) "will-unmount"))
+                                         (shutdown-event-bus! this)
+                                         (super))
+                                       :render
+                                       (fn [this super]
+                                         (when (debug? this)
+                                           (println (om/id this) "render"))
+                                         (binding [*parent* this]
+                                           (super)))})]
+    (when out-event-ch
+      (if-let [bubbling-bus (::bubbling event-buses)]
+        (impl/tap bubbling-bus out-event-ch)
+        (throw (js/Error. "Bubbling event bus not available. Make sure to use root> or root<>."))))
+    (om/root f value
+             (merge options {:instrument (fn [f x m]
+                                           (let [parent-buses (or
+                                                                (and *parent* (om/get-state *parent* ::event-buses))
+                                                                event-buses)]
+                                             (om/build* f x (-> m
+                                                                (update-in [:init-state] merge {::event-buses parent-buses})
+                                                                (merge {:descriptor descriptor})))))}))))
+
+;; As you've learned above there are three protocols corresponding to trickling and bubbling events and to "all" events
+;; regardless of their direciton. Using `root*` you can pass your own custom interfaces and event buses.
+
+(def default-protocols
+  {::all #(when (satisfies? IGotEvent %)
+           got-event)
+   ::bubbling #(when (satisfies? IGotBubblingEvent %)
+                got-bubbling-event)
+   ::trickling #(when (satisfies? IGotTricklingEvent %)
+                 got-trickling-event)})
+
+
+;; ### Event bus setup details.
 
 (defn- init-event-bus!
-  "This function adds support for triggering events and, if the component reified IGotEvent, support for handling events
-   from child components.
+  "The `init-event-bus!` function adds support for triggering events and, if the component reified any of the supported
+   protocols, the code to handle events.
 
-   It is called from when a component mounts (see `root>` above).
+   This function is called from when a component mounts (see `root*`). It sets ::event-buses in the components local
+   state to a map containing one or more event buses."
+  [owner protocols]
+  (let [{:keys [xform buf-or-n debug] :as config} (get-config owner)]
+    (when debug
+      (println (om/id owner) "init-event-bus!" (when xform "+xform")))
+    (impl/with-options {:buf-or-n buf-or-n
+                        :debug    debug}
+                       (om/set-state! owner
+                                      ::event-buses
+                                      (build-buses owner xform protocols)))))
 
-   What it does is it takes the event bus from its parent component (`downstream`) and using `core.async/mult`
-   it taps into it to fork it into two branches: `branch` this component may use to handle events and
-   `upstream` to pass on to child components (see `root>` above).
+(defn build-buses
+  "What the `build-buses` function does does is it takes the event bus from its parent component and extends it, either
+  by forking it to handle events or by creating a 'leg' of the bus with minimal overhead if the component reifies none
+  of the compatible event-handling protocols.
 
-   It does sets the local state:
-   ::trigger-fn  -  function that triggers an event;
-   ::event-bus   -  core.async channel to be passed to the component's children (see `root>` above).
+  To create a handler it composes potential handlers for supported protocols. Both `catch-all-handler` and the result
+  of the application of `find-handler` can return nil but `compose-handlers` will take care of that."
+  [owner xform protocols]
+  (let [catch-all-handler (find-handler owner ::all protocols)
+        buses (into {}
+                (for [[k bus] (om/get-state owner ::event-buses)]
+                  (let [handler (compose-handlers catch-all-handler (find-handler owner k protocols))]
+                    [k (if handler
+                         (do
+                           (when (debug? owner)
+                             (println (om/id owner) "adding fork"))
+                           (impl/add-fork bus handler xform))
+                         (do
+                           (when (debug? owner)
+                             (println (om/id owner) "adding leg"))
+                           (impl/add-leg bus xform)))])))]
+    buses))
 
-   **IMPORTANT:** Do not use the local state values directly; they are for internal use only.
+(defn- find-handler
+  "The `find-handler` function looks up a protocol builder function in `protocol` using `bus-key` as, well,
+  the key (for instance, `::bubbling`) and, if one is found, binds it to a component resulting in an event handling function.
+  If the protocol isn't implemented by the `component`, the function returns nil."
+  [owner bus-key protocols]
+  (let [component (om/children owner)]
+    (when-let [handler-fn ((bus-key protocols) component)]
+      (if-not (debug? owner)
+        (partial handler-fn component)
+        (fn [event]
+          (case (and (map? event)
+                     (:event event))
+            :om-event-bus.impl/alive (println (om/id owner) "Event-handling go loop is running.")
+            :om-event-bus.impl/dead (println (om/id owner) "Event-handling go loop has just died.")
+            (do
+              (println (map? event) (:event event))
+              (println (om/id owner) "received" event)
+              (handler-fn component event))))))))
 
-   Please note that this mult/tap magic happens only if the component reifies the `IGotEvent` protocol and, to some
-   extend, for `IInitEventBus` protocol as well. For components that don't care about events, overhead is minimal."
-  [this]
-  (trace "Initializing event bus for" (om/id this))
-  (let [downstream (om/get-state this ::event-bus)
-        c (om/children this)
-        {:keys [xform buf-or-n]} (merge default-config
-                                        (when (satisfies? IInitEventBus c)
-                                          (or (init-event-bus c) {})))]
-    (om/set-state! this ::trigger-fn (fn [event]
-                                       (async/put! downstream (maybe-apply-xform xform event))))
-    (when (or (satisfies? IGotEvent c) xform)
-      (let [upstream (async/chan buf-or-n xform)
-            branch (async/chan buf-or-n)
-            fork (async/mult upstream)]
-        (om/set-state! this ::close-fn (fn []
-                                         (async/untap-all fork)
-                                         (async/close! upstream)
-                                         (async/close! branch)))
-        (om/set-state! this ::event-bus upstream)
-        (async/tap fork downstream)
-        (when (satisfies? IGotEvent c)
-          (async/tap fork branch)
-          (async/go-loop []
-                         (let [[event ch] (async/alts! [branch (async/timeout 5000)])] ;; TODO: Remove this code.
-                           (if event
-                             (do
-                               (got-event c event)
-                               (recur))
-                             (when (not= ch branch)
-                               (trace (om/id this) "is listening...")
-                               (recur))))))))))
+(defn- compose-handlers
+  "To handle possible non-existent handlers (a.k.a. nils) this function returns either:
+
+   - an event handler calling one of more event-handing functions in `handlers` if any of the handlers is not `nil`, or
+   - nil (if all `handlers` are `nil`)."
+  [& handlers]
+  (when-let [funs (not-empty (remove nil? handlers))]
+    (fn [event]
+      (doseq [f funs]
+        (f event)))))
+
+;; ### Event bus shutdown.
+;;
+;; When a component unmounts, event bus needs to shut down by closing all channels, terminating go loops etc.
 
 (defn- shutdown-event-bus!
-  "This function mainly shuts down event bus channels for this component.
-   It simply calls `::close-fn` set up in `init-event-bus!` above. This also terminates `go-loop` handling events."
-  [this]
-  (om/set-state! this ::trigger-fn #(throw (js/Error. "Event bus has already been shut down.")))
-  (let [c (om/children this)
-        close-fn (om/get-state this ::close-fn)]
-    (when (satisfies? IGotEvent c)
-      (trace "Shutting down event bus for" (om/id this))
-      (close-fn))))
+  "This function shuts down event bus for the component. It simply calls `shutdown` on the event bus set up in
+  `init-event-bus!` above."
+  [owner]
+  (when (debug? owner)
+    (println (om/id owner) "shutdown-event-bus!"))
+  (doseq [[_ bus] (om/get-state owner ::event-buses)]
+    (impl/shutdown bus))
+  (om/set-state! owner ::event-buses nil))                  ; TODO: Set each to nil-event-bus reporting meaningful errors.
 
-(defn- maybe-apply-xform
-  "For an xform it returns the result of applying xform to an event.
-  If xform is nil it returns unmodified event."
-  [xform event]
-  (if xform
-    (first (reduce (xform conj) [] [event]))
-    event))
+;; ### Event triggering details.
 
-; =============================================================================
-;; ### Custom om component descriptor
+(defn trigger*
+  "The `trigger*` function triggers an `event` for a specific component (`owner`) and a bus identified by `event-bus-key`
+  (e.g. ::bubbling).
 
-(defn- around-method
-  "Overrides a pure method by wrapping it in f."
-  [method methods f]
-  (let [prev-method (method methods)]
-    (-> methods
-        (assoc method #(this-as this
-                                (do
-                                   (f this (fn []
-                                             (.call prev-method this)))))))))
+  It simply looks up the event bus in ::event-buses local state and uses it to trigger an event."
+  [owner event-bus-key event]
+  (let [event-bus (event-bus-key (om/get-state owner ::event-buses))]
+    (impl/trigger event-bus event))
+  nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
+        ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
+        ; as appropriate."
 
-(defn- extend-pure-methods
-  "Given pure methods and a map of overrides, it extends pure methods with new lifecycle methods.
+;; ### Helpers.
 
-  Example:
+(defn get-config
+  "This function, `get-config` returns the component's event bus config. See `IInitEventBus`."
+  [owner]
+  (let [c (om/children owner)]
+    (merge default-config
+           (when (satisfies? IInitEventBus c)
+             (init-event-bus c)))))
 
-  <pre><code>
-  (extend-pure-methods
-    {:render (fn [this super]
-                ;; Do something.
-                (super))}) ;; Call the original method.
-  </pre></code>
-
-  You can also specify a map of pure methods as the first argument."
-  ([new-methods]
-    (extend-pure-methods om/pure-methods new-methods))
-  ([methods new-methods]
-    (loop [methods' methods [[new-method-name new-method-fn] & new-methods'] (seq new-methods)]
-      (if new-method-name
-        (recur (around-method new-method-name methods' new-method-fn) new-methods')
-        methods'))))
-
-(defn- make-descriptor
-  "Creates a custom descriptor with support for an event bus."
-  [new-methods]
-  (let [methods (extend-pure-methods new-methods)
-        descriptor (om/specify-state-methods! (clj->js methods))]
-    descriptor))
-
-;; ### Fluff
-
-(defn trace
-  [& args]
-  #_(apply println args))
+(defn debug?
+  "The `debug` returns true if event bus debugging is turned on for the component."
+  [owner]
+  (some? (:debug (get-config owner))))

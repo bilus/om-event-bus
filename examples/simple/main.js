@@ -7,7 +7,9 @@ goog.addDependency("../cljs/core/async/impl/channels.js", ['cljs.core.async.impl
 goog.addDependency("../cljs/core/async/impl/ioc_helpers.js", ['cljs.core.async.impl.ioc_helpers'], ['cljs.core', 'cljs.core.async.impl.protocols']);
 goog.addDependency("../cljs/core/async/impl/timers.js", ['cljs.core.async.impl.timers'], ['cljs.core.async.impl.channels', 'cljs.core.async.impl.dispatch', 'cljs.core', 'cljs.core.async.impl.protocols']);
 goog.addDependency("../cljs/core/async.js", ['cljs.core.async'], ['cljs.core.async.impl.channels', 'cljs.core.async.impl.dispatch', 'cljs.core', 'cljs.core.async.impl.buffers', 'cljs.core.async.impl.protocols', 'cljs.core.async.impl.ioc_helpers', 'cljs.core.async.impl.timers']);
+goog.addDependency("../om_event_bus/impl.js", ['om_event_bus.impl'], ['cljs.core', 'cljs.core.async']);
 goog.addDependency("../om/dom.js", ['om.dom'], ['cljs.core']);
 goog.addDependency("../om/core.js", ['om.core'], ['goog.dom', 'cljs.core', 'om.dom', 'goog.ui.IdGenerator']);
-goog.addDependency("../om_event_bus/core.js", ['om_event_bus.core'], ['cljs.core', 'cljs.core.async', 'om.core']);
+goog.addDependency("../om_event_bus/descriptor.js", ['om_event_bus.descriptor'], ['cljs.core', 'om.core']);
+goog.addDependency("../om_event_bus/core.js", ['om_event_bus.core'], ['cljs.core', 'om_event_bus.impl', 'cljs.core.async', 'om.core', 'om_event_bus.descriptor']);
 goog.addDependency("../examples/simple/core.js", ['examples.simple.core'], ['om_event_bus.core', 'cljs.core', 'om.dom', 'om.core']);
