@@ -277,11 +277,12 @@
      (is (matching? ["after shutdown"]
                     (take-all! os))))))
 
-; TODO: Update examples so println gets appended to parent and remove mentions of having to open console.
 
 ; TODO: Build marginalia docs.
 ; TODO: Build examples and copy them to gh-pages branch. Link to new examples from Readme.
 
+; TODO: Wizard example (perhaps modal window would be better.)
+; TODO: Update examples so println gets appended to parent and remove mentions of having to open console.
 ; TODO: Write documentation for impl.
 ; --
 
