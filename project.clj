@@ -1,4 +1,4 @@
-(defproject om-event-bus "0.2.0"
+(defproject om-event-bus "0.2.1"
             :description "Simple custom events for Om."
             :url "http://github.com/bilus/om-event-bus"
             :license {:name "Eclipse Public License"

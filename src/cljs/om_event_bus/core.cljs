@@ -353,4 +353,4 @@
 (defn debug?
   "The `debug` returns true if event bus debugging is turned on for the component."
   [owner]
-  (some? (:debug (get-config owner))))
+  (true? (:debug (get-config owner))))
