@@ -38,7 +38,7 @@
                                   (f this (fn []
                                             (.call prev-method this)))))))))
 
-(defn- make-descriptor
+(defn make-descriptor
   "Creates a custom descriptor with support for an event bus."
   [new-methods]
   (let [methods (extend-pure-methods new-methods)
