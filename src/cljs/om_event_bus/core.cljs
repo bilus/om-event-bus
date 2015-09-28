@@ -43,13 +43,13 @@
   >
   > See [this example](https://github.com/bilus/om-event-bus/blob/master/examples/go_loop/src/core.cljs) ([demo](http://bilus.github.io/om-event-bus/examples/go_loop/index.html))."
   ([f value options & [out-event-ch]]
-    (root* f
-           value
-           options
-           out-event-ch
-           {::bubbling (impl/event-bus (impl/bubbling-router))
-            ::trickling (impl/event-bus (impl/trickling-router))}
-           default-protocols)))
+   (root* f
+          value
+          options
+          out-event-ch
+          {::bubbling  (impl/event-bus (impl/bubbling-router))
+           ::trickling (impl/event-bus (impl/trickling-router))}
+          default-protocols)))
 
 ;; The other two versions each create a single bus for one direction only, either bubbling or trickling.
 
@@ -61,24 +61,24 @@
   > Similarly too `root<>`, the arity 4 version lets you specify a channel if you also want to handle events outside of
   > component hierarchy and if you pass the channel you **MUST** consume events."
   ([f value options]
-    (root> f value options nil))
+   (root> f value options nil))
   ([f value options out-event-ch]
-    (root* f
-           value
-           options
-           out-event-ch
-           {::bubbling (impl/event-bus (impl/bubbling-router))}
-           default-protocols)))
+   (root* f
+          value
+          options
+          out-event-ch
+          {::bubbling (impl/event-bus (impl/bubbling-router))}
+          default-protocols)))
 
 (defn root<
   "Use `root<` instead of om.core/root to add support for sending events from parent components to child components only (trickling)."
   ([f value options]
-    (root* f
-           value
-           options
-           nil
-           {::trickling (impl/event-bus (impl/trickling-router))}
-           default-protocols)))
+   (root* f
+          value
+          options
+          nil
+          {::trickling (impl/event-bus (impl/trickling-router))}
+          default-protocols)))
 
 ;; Use these functions anywhere you would normally use om.core/root. Example:
 ;;
@@ -233,10 +233,10 @@
 ;; regardless of their direciton. Using `root*` you can pass your own custom interfaces and event buses.
 
 (def default-protocols
-  {::all #(when (satisfies? IGotEvent %)
-           got-event)
-   ::bubbling #(when (satisfies? IGotBubblingEvent %)
-                got-bubbling-event)
+  {::all       #(when (satisfies? IGotEvent %)
+                 got-event)
+   ::bubbling  #(when (satisfies? IGotBubblingEvent %)
+                 got-bubbling-event)
    ::trickling #(when (satisfies? IGotTricklingEvent %)
                  got-trickling-event)})
 
@@ -269,17 +269,17 @@
   [owner xform protocols]
   (let [catch-all-handler (find-handler owner ::all protocols)
         buses (into {}
-                (for [[k bus] (om/get-state owner ::event-buses)]
-                  (let [handler (compose-handlers catch-all-handler (find-handler owner k protocols))]
-                    [k (if handler
-                         (do
-                           (when (debug? owner)
-                             (println (om/id owner) "adding fork"))
-                           (impl/add-fork bus handler xform))
-                         (do
-                           (when (debug? owner)
-                             (println (om/id owner) "adding leg"))
-                           (impl/add-leg bus xform)))])))]
+                    (for [[k bus] (om/get-state owner ::event-buses)]
+                      (let [handler (compose-handlers catch-all-handler (find-handler owner k protocols))]
+                        [k (if handler
+                             (do
+                               (when (debug? owner)
+                                 (println (om/id owner) "adding fork"))
+                               (impl/add-fork bus handler xform))
+                             (do
+                               (when (debug? owner)
+                                 (println (om/id owner) "adding leg"))
+                               (impl/add-leg bus xform)))])))]
     buses))
 
 (defn- find-handler
@@ -336,9 +336,9 @@
   [owner event-bus-key event]
   (let [event-bus (event-bus-key (om/get-state owner ::event-buses))]
     (impl/trigger event-bus event))
-  nil)  ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
-        ; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
-        ; as appropriate."
+  nil)                                                      ; Avoid the following React.js warning: "Returning `false` from an event handler is deprecated
+; and will be ignored in a future release. Instead, manually call e.stopPropagation() or e.preventDefault(),
+; as appropriate."
 
 ;; ### Helpers.
 
@@ -354,3 +354,7 @@
   "The `debug` returns true if event bus debugging is turned on for the component."
   [owner]
   (true? (:debug (get-config owner))))
+
+
+
+

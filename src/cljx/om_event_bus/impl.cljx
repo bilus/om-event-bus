@@ -4,9 +4,7 @@
   #+cljs
   (:require [cljs.core.async :as async])
   #+cljs
-  (:require-macros [cljs.core.async.macros :as async]
-                   [om-event-bus.impl :refer [options]])
-  )
+  (:require-macros [cljs.core.async.macros :as async]))
 
 ;; ## Event bus implementation
 
@@ -23,9 +21,8 @@
   `(binding [*options* (merge *options* ~opts)]
      ~@body))
 
-(defmacro options
-  []
-  `*options*)
+(defn options []
+  *options*)
 
 (defprotocol ITriggerEvent
   (trigger [_ event]))

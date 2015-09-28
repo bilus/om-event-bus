@@ -1,7 +1,8 @@
 (ns examples.simple.core
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [om-event-bus.core :as event-bus]))
+            [om-event-bus.core :as event-bus]
+            [om-event-bus.descriptor :refer :all]))
 
 (enable-console-print!)
 

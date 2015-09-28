@@ -1,4 +1,3 @@
-
 (ns om-event-bus.descriptor
   (:require [om.core :as om :include-macros true]))
 
@@ -21,22 +20,22 @@
 
   You can also specify a map of pure methods as the first argument."
   ([new-methods]
-    (extend-pure-methods om/pure-methods new-methods))
+   (extend-pure-methods om/pure-methods new-methods))
   ([methods new-methods]
-    (loop [methods' methods [[new-method-name new-method-fn] & new-methods'] (seq new-methods)]
-      (if new-method-name
-        (recur (around-method new-method-name methods' new-method-fn) new-methods')
-        methods'))))
+   (loop [methods' methods
+          [[new-method-name new-method-fn] & new-methods'] (seq new-methods)]
+     (if new-method-name
+       (recur (around-method new-method-name methods' new-method-fn) new-methods')
+       methods'))))
 
 (defn- around-method
   "This function does the actual job of overriding a pure method by wrapping it in f."
   [method methods f]
   (let [prev-method (method methods)]
-    (-> methods
-        (assoc method #(this-as this
-                                (do
-                                  (f this (fn []
-                                            (.call prev-method this)))))))))
+    (assoc methods method #(this-as this
+                                    (do
+                                      (f this (fn []
+                                                (.call prev-method this))))))))
 
 (defn make-descriptor
   "Creates a custom descriptor with support for an event bus."
