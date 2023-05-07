@@ -19,7 +19,7 @@
             [cljs.core.async :as async]
             [om-event-bus.impl :as impl]
             [om-event-bus.descriptor :as d])
-  (:require-macros [cljs.core.async.macros :as async]
+  (:require-macros [cljs.core.async.macros :as am]
                    [om-event-bus.impl :as impl]))
 
 ; =============================================================================

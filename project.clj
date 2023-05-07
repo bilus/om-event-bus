@@ -1,4 +1,4 @@
-(defproject om-event-bus "0.2.2"
+(defproject om-event-bus "0.2.3"
             :description "Simple custom events for Om."
             :url "http://github.com/bilus/om-event-bus"
             :license {:name "Eclipse Public License"
@@ -12,7 +12,7 @@
             :auto-clean false
             :source-paths ["src/cljx" "src/clj" "src/cljs"]
 
-            :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
+            :plugins [[lein-cljsbuild "1.1.8"]
                       [bilus/lein-marginalia "0.8.8"]
                       [quickie "0.3.6"]
                       [com.keminglabs/cljx "0.5.0"]

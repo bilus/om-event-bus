@@ -1,10 +1,10 @@
 (ns om-event-bus.impl
   #+clj
-  (:require [clojure.core.async :as async])
+  (:require [clojure.core.async :refer [go-loop] :as async])
   #+cljs
   (:require [cljs.core.async :as async])
   #+cljs
-  (:require-macros [cljs.core.async.macros :as async]))
+  (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 ;; ## Event bus implementation
 
@@ -137,7 +137,7 @@
 
 (defn- handle-events!
   [ch f]
-  (async/go-loop []
+  (go-loop []
     (let [event (async/<! ch)]
       (when event
         (f event)
@@ -145,7 +145,7 @@
 
 (defn- dbg-handle-events!
   [ch f]
-  (async/go-loop []
+  (go-loop []
     (let [t (async/timeout 5000)
           [event ch] (async/alts! [ch t])]
       ; Use events below instead of println so the component using may identify itself when showing the event to
