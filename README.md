@@ -143,7 +143,7 @@ In the former case, it lets components add detailed information to passing event
 transforming explicitly. The latter use helps you add default information to all events triggered by the component in
 one place. Defining an xform guarantees that all events are transformed consistently.
 
-You may find xforms particularly useful in cases where `om.core/path` breaks encapsulation or is too limited. Another 
+You may find xforms particularly useful in cases where `om.core/path` breaks encapsulation or is too limited. Another
 example usage is passing local state (or its derivative) to parent components.
 
 In this concocted and useless example, we print the full path an event took to arrive at `parent-view`:
@@ -222,6 +222,19 @@ add support just trickling. This will reduce the overhead because only one event
 ```
 
 Open the generated html files, e.g. `examples/simple/index.html`.
+
+
+### Contributing
+
+## Installing locally
+
+While on the branch:
+
+``` clojure
+lein pom &&
+  lein jar &&
+  lein install
+```
 
 
 ## License
