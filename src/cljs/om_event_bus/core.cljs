@@ -16,15 +16,12 @@
 ;;
 (ns om-event-bus.core
   (:require [om.core :as om :include-macros true]
-            [cljs.core.async :as async]
-            [om-event-bus.impl :as impl]
-            [om-event-bus.descriptor :as d])
-  (:require-macros [cljs.core.async.macros :as async]
-                   [om-event-bus.impl :as impl]))
+            [om-event-bus.impl :as impl :include-macros true]
+            [om-event-bus.descriptor :as d]))
 
 ; =============================================================================
 
-(declare init-event-bus! shutdown-event-bus! trace root* default-protocols)
+(declare init-event-bus! shutdown-event-bus! root* default-protocols)
 (def ^:dynamic ^:private *parent* nil)
 
 ;; ### Replacements for om.core/root
@@ -223,8 +220,8 @@
     (om/root f value
              (merge options {:instrument (fn [f x m]
                                            (let [parent-buses (or
-                                                                (and *parent* (om/get-state *parent* ::event-buses))
-                                                                event-buses)]
+                                                               (and *parent* (om/get-state *parent* ::event-buses))
+                                                               event-buses)]
                                              (om/build* f x (-> m
                                                                 (update-in [:init-state] merge {::event-buses parent-buses})
                                                                 (merge {:descriptor descriptor})))))}))))
@@ -234,12 +231,11 @@
 
 (def default-protocols
   {::all       #(when (satisfies? IGotEvent %)
-                 got-event)
+                  got-event)
    ::bubbling  #(when (satisfies? IGotBubblingEvent %)
-                 got-bubbling-event)
+                  got-bubbling-event)
    ::trickling #(when (satisfies? IGotTricklingEvent %)
-                 got-trickling-event)})
-
+                  got-trickling-event)})
 
 ;; ### Event bus setup details.
 
@@ -255,9 +251,9 @@
       (println (om/id owner) "init-event-bus!" (when xform "+xform")))
     (impl/with-options {:buf-or-n buf-or-n
                         :debug    debug}
-                       (om/set-state! owner
-                                      ::event-buses
-                                      (build-buses owner xform protocols)))))
+      (om/set-state! owner
+                     ::event-buses
+                     (build-buses owner xform protocols)))))
 
 (defn build-buses
   "What the `build-buses` function does does is it takes the event bus from its parent component and extends it, either
@@ -354,7 +350,3 @@
   "The `debug` returns true if event bus debugging is turned on for the component."
   [owner]
   (true? (:debug (get-config owner))))
-
-
-
-
